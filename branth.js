@@ -1923,7 +1923,7 @@ class BranthRoom {
 }
 
 const Room = {
-	scale: 2,
+	scale: 1,
 	w: 300,
 	h: 150,
 	id: -1,

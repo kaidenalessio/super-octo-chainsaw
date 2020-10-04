@@ -24,6 +24,18 @@ class Vec3 {
 		this.y += y;
 		this.z += z;
 	}
+	subtract(x, y, z) {
+		if (x instanceof Vec3) {
+			z = x.z;
+			y = x.y;
+			x = x.x;
+		}
+		if (y === undefined) y = x;
+		if (z === undefined) z = x;
+		this.x -= x;
+		this.y -= y;
+		this.z -= z;
+	}
 	multiply(x, y, z) {
 		if (x instanceof Vec3) {
 			z = x.z;
@@ -45,6 +57,15 @@ class Vec3 {
 		this.x += x;
 		this.y += y;
 	}
+	subtractXY(x, y) {
+		if (x instanceof Vec3) {
+			y = x.y;
+			x = x.x;
+		}
+		if (y === undefined) y = x;
+		this.x -= x;
+		this.y -= y;
+	}
 	multiplyXY(x, y) {
 		if (x instanceof Vec3) {
 			y = x.y;
@@ -57,6 +78,19 @@ class Vec3 {
 	toString(fractionDigits=-1) {
 		if (fractionDigits > -1) return `(${this.x.toFixed(fractionDigits)}, ${this.y.toFixed(fractionDigits)}, ${this.z.toFixed(fractionDigits)})`;
 		return `(${this.x}, ${this.y}, ${this.z})`;
+	}
+	static subtract(v1, v2) {
+		return new Vec3(v1.x-v2.x, v1.y-v2.y, v1.z-v2.z);
+	}
+	static dot(v1, v2) {
+		return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+	}
+	static cross(v1, v2) {
+		return new Vec3(
+			v1.y * v2.z - v1.z * v2.y,
+			v1.z * v2.x - v1.x * v2.z,
+			v1.x * v2.y - v1.y * v2.x
+		);
 	}
 }
 
@@ -248,7 +282,7 @@ class Mesh {
 			new Triangle([new Vec3(0, 0, x), new Vec3(0, 0, 0), new Vec3(x, 0, 0)]),
 			new Triangle([new Vec3(0, 0, x), new Vec3(x, 0, 0), new Vec3(x, 0, x)]),
 			// X Rotation Gizmo
-			new Triangle([new Vec3(0, xx, xx), new Vec3(xx, xx * 0.5, xx), new Vec3(x, xx, xx)])
+			// new Triangle([new Vec3(x, xx, xx), new Vec3(xx, xx * 0.5, xx), new Vec3(0, xx, xx)])
 		]);
 
 		// Center the cube
@@ -290,7 +324,7 @@ const multiplyMatrix = (i, m) => {
 	return o;
 };
 
-const processMesh = (mesh, matProj) => {
+const processMesh = (mesh, matProj, camera) => {
 	const tris = [];
 	for (let i = mesh.tris.length - 1; i >= 0; --i) {
 		const tri = mesh.tris[i].clone();
@@ -317,6 +351,13 @@ const processMesh = (mesh, matProj) => {
 			p.add(mesh.transform.position);
 		});
 
+		// Normals
+		const line1 = Vec3.subtract(tri.p[1], tri.p[0]);
+		const line2 = Vec3.subtract(tri.p[2], tri.p[0]);
+		const normal = Vec3.cross(line1, line2);
+
+		if (Vec3.dot(normal, Vec3.subtract(tri.p[0], camera)) >= 0) continue;
+
 		// Project triangles from 3D -> 2D
 		tri.p[0] = multiplyMatrix(tri.p[0], matProj);
 		tri.p[1] = multiplyMatrix(tri.p[1], matProj);
@@ -334,8 +375,10 @@ const processMesh = (mesh, matProj) => {
 };
 
 const rasterizeTriangles = (trianglesToRaster) => {
+	Draw.CTX.globalAlpha = 0.5;
 	Draw.CTX.lineJoin = LineJoin.round;
-	Draw.CTX.strokeStyle = C.white;
+	Draw.CTX.fillStyle = C.white;
+	Draw.CTX.strokeStyle = C.black;
 	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
 		const tri = trianglesToRaster[i];
 		Draw.CTX.beginPath();
@@ -343,11 +386,15 @@ const rasterizeTriangles = (trianglesToRaster) => {
 		Draw.CTX.lineTo(tri.p[1].x, tri.p[1].y);
 		Draw.CTX.lineTo(tri.p[2].x, tri.p[2].y);
 		Draw.CTX.closePath();
-		Draw.CTX.stroke();
+		Draw.CTX.fill();
+		if (showOutline) Draw.CTX.stroke();
 	}
+	Draw.CTX.globalAlpha = 1;
 };
 
 let matProj = Mat4.makeProjection();
+
+let mainCamera = new Vec3(0, 0, 0);
 
 const meshTri = Mesh.makeCube();
 meshTri.transform.position.z = 5;
@@ -363,7 +410,11 @@ const meshRotGizmoZ = Mesh.makeTorusSmall();
 meshRotGizmoZ.transform.position.z = 5;
 meshRotGizmoZ.transform.rotation.z = 90;
 
-let showRotGizmo = true;
+let showOutline = true;
+let showRotGizmo = false;
+
+let optResNames = ['Low', 'Normal', 'High', 'Ultra'];
+let optResIndex = 1;
 
 let trianglesToRaster = [];
 
@@ -384,7 +435,18 @@ Game.update = () => {
 		)
 	};
 
+	if (Input.keyDown(KeyCode.U)) showOutline = !showOutline;
 	if (Input.keyDown(KeyCode.H)) showRotGizmo = !showRotGizmo;
+	if (Input.keyDown(KeyCode.L)) {
+		if (++optResIndex > 3) optResIndex = 0;
+		switch (optResIndex) {
+			case 0: Room.scale = 0.5; break;
+			case 1: Room.scale = 1; break;
+			case 2: Room.scale = 2; break;
+			case 3: Room.scale = 4; break;
+		}
+		Room.resize();
+	}
 
 	matProj = Mat4.makeProjection(Room.h / Room.w);
 
@@ -401,13 +463,13 @@ Game.update = () => {
 	meshRotGizmoZ.transform.rotation.add(input.rotation);
 
 	trianglesToRaster.length = 0;
-	trianglesToRaster = processMesh(meshTri, matProj);
+	trianglesToRaster = processMesh(meshTri, matProj, mainCamera);
 
 	if (showRotGizmo) {
 		trianglesToRaster = trianglesToRaster
-			.concat(processMesh(meshRotGizmoY, matProj))
-			.concat(processMesh(meshRotGizmoX, matProj))
-			.concat(processMesh(meshRotGizmoZ, matProj));
+			.concat(processMesh(meshRotGizmoY, matProj, mainCamera))
+			.concat(processMesh(meshRotGizmoX, matProj, mainCamera))
+			.concat(processMesh(meshRotGizmoZ, matProj, mainCamera));
 	}
 };
 
@@ -419,11 +481,14 @@ Game.renderUI = () => {
 	Draw.setFont(Font.m);
 	Draw.setColor(C.white);
 	Draw.setHVAlign(Align.l, Align.t);
-	Draw.text(16, 48, `${meshTri.transform.position.toString(2)}\n${meshTri.transform.rotation.toString(2)}` +
+	Draw.text(16, 48, Time.FPS +
+		`\n${meshTri.transform.position.toString(2)}\n${meshTri.transform.rotation.toString(2)}` +
 		`\nClick 'Choose File' to load an .obj model.` +
 		'\nPress <W>, <A>, <S>, <D>, <Q>, and <E> to move around.' +
 		'\nPress arrow buttons plus <Z> and <C> to rotate around.' +
-		`\nPress <H> to ${showRotGizmo? 'hide' : 'show'} rotation gizmo.`);
+		`\nPress <U> to ${showOutline? 'hide' : 'show'} outline.` +
+		`\nPress <H> to ${showRotGizmo? 'hide' : 'show'} rotation gizmo.` +
+		`\nPress <L> to change resolution (${optResNames[optResIndex]}).`);
 };
 
 Room.add(Game);
