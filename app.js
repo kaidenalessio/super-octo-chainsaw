@@ -75,6 +75,18 @@ class Vec3 {
 		this.x *= x;
 		this.y *= y;
 	}
+	get length() {
+		return Math.sqrt(this.x*this.x + this.y*this.y + this.z*this.z);
+	}
+	normalize() {
+		let l = this.length;
+		if (l !== 0) {
+			l = 1 / l;
+			this.x *= l;
+			this.y *= l;
+			this.z *= l;
+		}
+	}
 	toString(fractionDigits=-1) {
 		if (fractionDigits > -1) return `(${this.x.toFixed(fractionDigits)}, ${this.y.toFixed(fractionDigits)}, ${this.z.toFixed(fractionDigits)})`;
 		return `(${this.x}, ${this.y}, ${this.z})`;
@@ -100,6 +112,8 @@ class Triangle {
 	 */
 	constructor(points) {
 		this.p = points;
+		this.c = 0;
+		this.zMid = 0;
 	}
 
 	clone() {
@@ -114,6 +128,10 @@ class Triangle {
 		for (let i = 0; i < 3; i++) {
 			fn(this.p[i]);
 		}
+	}
+
+	calculateZMid() {
+		this.zMid =  (this.p[0].z + this.p[1].z + this.p[2].z) * 0.3333333333333333;
 	}
 }
 
@@ -354,9 +372,14 @@ const processMesh = (mesh, matProj, camera) => {
 		// Normals
 		const line1 = Vec3.subtract(tri.p[1], tri.p[0]);
 		const line2 = Vec3.subtract(tri.p[2], tri.p[0]);
-		const normal = Vec3.cross(line1, line2);
+		const normal = Vec3.cross(line1, line2); normal.normalize();
 
 		if (Vec3.dot(normal, Vec3.subtract(tri.p[0], camera)) >= 0) continue;
+
+		// Illumination
+		const lightDirection = new Vec3(0, 0, -1); lightDirection.normalize();
+
+		tri.c = Vec3.dot(normal, lightDirection);
 
 		// Project triangles from 3D -> 2D
 		tri.p[0] = multiplyMatrix(tri.p[0], matProj);
@@ -369,16 +392,17 @@ const processMesh = (mesh, matProj, camera) => {
 			p.multiplyXY(Room.mid.w, Room.mid.h);
 		});
 
+		tri.calculateZMid();
+
 		tris.push(tri);
 	}
 	return tris;
 };
 
 const rasterizeTriangles = (trianglesToRaster) => {
-	Draw.CTX.globalAlpha = 0.5;
+	trianglesToRaster.sort((a, b) => a.zMid < b.zMid? -1 : 1);
+
 	Draw.CTX.lineJoin = LineJoin.round;
-	Draw.CTX.fillStyle = C.white;
-	Draw.CTX.strokeStyle = C.black;
 	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
 		const tri = trianglesToRaster[i];
 		Draw.CTX.beginPath();
@@ -386,10 +410,17 @@ const rasterizeTriangles = (trianglesToRaster) => {
 		Draw.CTX.lineTo(tri.p[1].x, tri.p[1].y);
 		Draw.CTX.lineTo(tri.p[2].x, tri.p[2].y);
 		Draw.CTX.closePath();
+
+		const c = 50 + tri.c * 205;
+		Draw.setColor(`rgb(${c}, ${c}, ${c * 0.5})`);
 		Draw.CTX.fill();
-		if (showOutline) Draw.CTX.stroke();
+		Draw.CTX.stroke();
+
+		if (showOutline) {
+			Draw.CTX.strokeStyle = C.black;
+			Draw.CTX.stroke();
+		}
 	}
-	Draw.CTX.globalAlpha = 1;
 };
 
 let matProj = Mat4.makeProjection();
