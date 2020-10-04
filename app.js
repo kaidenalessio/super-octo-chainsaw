@@ -389,7 +389,8 @@ const processMesh = (mesh, matProj, camera) => {
 		// Scale into view (-1 to 1) -> (0 to screen size)
 		tri.onAllPoints((p) => {
 			p.addXY(1);
-			p.multiplyXY(Room.mid.w, Room.mid.h);
+			p.multiplyXY(Room.mid.w, -Room.mid.h);
+			p.y += Room.h;
 		});
 
 		tri.calculateZMid();
@@ -441,7 +442,7 @@ const meshRotGizmoZ = Mesh.makeTorusSmall();
 meshRotGizmoZ.transform.position.z = 5;
 meshRotGizmoZ.transform.rotation.z = 90;
 
-let showOutline = true;
+let showOutline = false;
 let showRotGizmo = false;
 
 let optResNames = ['Low', 'Normal', 'High', 'Ultra'];
@@ -460,9 +461,9 @@ Game.update = () => {
 			(Input.keyHold(KeyCode.W) - Input.keyHold(KeyCode.S)) * spd * 0.1
 		),
 		rotation: new Vec3(
-			(Input.keyHold(KeyCode.Down) - Input.keyHold(KeyCode.Up)) * spd,
+			(Input.keyHold(KeyCode.Up) - Input.keyHold(KeyCode.Down)) * spd,
 			(Input.keyHold(KeyCode.Left) - Input.keyHold(KeyCode.Right)) * spd,
-			(Input.keyHold(KeyCode.C) - Input.keyHold(KeyCode.Z)) * spd
+			(Input.keyHold(KeyCode.Z) - Input.keyHold(KeyCode.C)) * spd
 		)
 	};
 
