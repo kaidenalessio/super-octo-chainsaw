@@ -1,8 +1,9 @@
 class Vec3 {
 	constructor(x, y, z) {
-		this.x = x;
-		this.y = y;
-		this.z = z;
+		this.x = x || 0;
+		this.y = y || 0;
+		this.z = z || 0;
+		this.w = 1;
 	}
 	clone() {
 		return new Vec3(this.x, this.y, this.z);
@@ -24,7 +25,7 @@ class Vec3 {
 		this.y += y;
 		this.z += z;
 	}
-	subtract(x, y, z) {
+	sub(x, y, z) {
 		if (x instanceof Vec3) {
 			z = x.z;
 			y = x.y;
@@ -36,7 +37,7 @@ class Vec3 {
 		this.y -= y;
 		this.z -= z;
 	}
-	multiply(x, y, z) {
+	mul(x, y, z) {
 		if (x instanceof Vec3) {
 			z = x.z;
 			y = x.y;
@@ -48,6 +49,18 @@ class Vec3 {
 		this.y *= y;
 		this.z *= z;
 	}
+	div(x, y, z) {
+		if (x instanceof Vec3) {
+			z = x.z;
+			y = x.y;
+			x = x.x;
+		}
+		if (y === undefined) y = x;
+		if (z === undefined) z = x;
+		this.x /= x;
+		this.y /= y;
+		this.z /= z;
+	}
 	addXY(x, y) {
 		if (x instanceof Vec3) {
 			y = x.y;
@@ -57,7 +70,7 @@ class Vec3 {
 		this.x += x;
 		this.y += y;
 	}
-	subtractXY(x, y) {
+	subXY(x, y) {
 		if (x instanceof Vec3) {
 			y = x.y;
 			x = x.x;
@@ -66,7 +79,7 @@ class Vec3 {
 		this.x -= x;
 		this.y -= y;
 	}
-	multiplyXY(x, y) {
+	mulXY(x, y) {
 		if (x instanceof Vec3) {
 			y = x.y;
 			x = x.x;
@@ -74,6 +87,15 @@ class Vec3 {
 		if (y === undefined) y = x;
 		this.x *= x;
 		this.y *= y;
+	}
+	divXY(x, y) {
+		if (x instanceof Vec3) {
+			y = x.y;
+			x = x.x;
+		}
+		if (y === undefined) y = x;
+		this.x /= x;
+		this.y /= y;
 	}
 	get length() {
 		return Math.sqrt(this.x*this.x + this.y*this.y + this.z*this.z);
@@ -91,8 +113,21 @@ class Vec3 {
 		if (fractionDigits > -1) return `(${this.x.toFixed(fractionDigits)}, ${this.y.toFixed(fractionDigits)}, ${this.z.toFixed(fractionDigits)})`;
 		return `(${this.x}, ${this.y}, ${this.z})`;
 	}
-	static subtract(v1, v2) {
+	static add(v1, v2) {
+		if (typeof v2 === 'number') return new Vec3(v1.x+v2, v1.y+v2, v1.z+v2);
+		return new Vec3(v1.x+v2.x, v1.y+v2.y, v1.z+v2.z);
+	}
+	static sub(v1, v2) {
+		if (typeof v2 === 'number') return new Vec3(v1.x-v2, v1.y-v2, v1.z-v2);
 		return new Vec3(v1.x-v2.x, v1.y-v2.y, v1.z-v2.z);
+	}
+	static mul(v1, v2) {
+		if (typeof v2 === 'number') return new Vec3(v1.x*v2, v1.y*v2, v1.z*v2);
+		return new Vec3(v1.x*v2.x, v1.y*v2.y, v1.z*v2.z);
+	}
+	static div(v1, v2) {
+		if (typeof v2 === 'number') return new Vec3(v1.x/v2, v1.y/v2, v1.z/v2);
+		return new Vec3(v1.x/v2.x, v1.y/v2.y, v1.z/v2.z);
 	}
 	static dot(v1, v2) {
 		return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
@@ -145,6 +180,25 @@ class Mat4 {
 		];
 	}
 
+	static multiplyVector(m, i) {
+		let v = new Vec3();
+		v.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];
+		v.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + m.m[3][1];
+		v.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + m.m[3][2];
+		v.w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + m.m[3][3];
+		return v;
+	}
+
+	static multiplyMatrix(m1, m2) {
+		const m = new Mat4();
+		for (let c = 0; c < 4; c++) {
+			for (let r = 0; r < 4; r++) {
+				m.m[r][c] = m1.m[r][0] * m2.m[0][c] + m1.m[r][1] * m2.m[1][c] + m1.m[r][2] * m2.m[2][c] + m1.m[r][3] * m2.m[3][c];
+			}
+		}
+		return m;
+	}
+
 	static makeProjection(aspectRatio=0.5625, fovDeg=90, near=0.1, far=1000) {
 		const fovRad = 1 / Math.tan(fovDeg * 0.5 * Math.PI / 180);
 		const m = new Mat4();
@@ -191,6 +245,34 @@ class Mat4 {
 		m.m[3][3] = 1;
 		return m;
 	}
+
+	static makeTranslation(x, y, z) {
+		if (x instanceof Vec3) {
+			z = x.z;
+			y = x.y;
+			x = x.x;
+		}
+		const m = new Mat4();
+		m.m[0][0] = 1;
+		m.m[1][1] = 1;
+		m.m[2][2] = 1;
+		m.m[3][3] = 1;
+		m.m[3][0] = x;
+		m.m[3][1] = y;
+		m.m[3][2] = z;
+		return m;
+	}
+
+	static makeWorld(transform) {
+		const matRotZ = Mat4.makeRotationZ(transform.rotation.z);
+		const matRotX = Mat4.makeRotationX(transform.rotation.x);
+		const matRotY = Mat4.makeRotationY(transform.rotation.y);
+		const matTrans = Mat4.makeTranslation(transform.position);
+		let matWorld = Mat4.multiplyMatrix(matRotZ, matRotX);
+		matWorld = Mat4.multiplyMatrix(matWorld, matRotY);
+		matWorld = Mat4.multiplyMatrix(matWorld, matTrans);
+		return matWorld;
+	}
 }
 
 class Mesh {
@@ -209,7 +291,7 @@ class Mesh {
 		for (let i = this.tris.length - 1; i >= 0; --i) {
 			const tri = this.tris[i];
 			tri.onAllPoints((p) => {
-				p.multiply(s);
+				p.mul(s);
 			});
 		}
 	}
@@ -217,28 +299,10 @@ class Mesh {
 	applyTransform() {
 		for (let i = this.tris.length - 1; i >= 0; --i) {
 			const tri = this.tris[i];
-
-			// Rotate (Z -> X -> Y)
-			const matRotZ = Mat4.makeRotationZ(this.transform.rotation.z);
-			const matRotX = Mat4.makeRotationX(this.transform.rotation.x);
-			const matRotY = Mat4.makeRotationY(this.transform.rotation.y);
-
-			tri.p[0] = multiplyMatrix(tri.p[0], matRotZ);
-			tri.p[1] = multiplyMatrix(tri.p[1], matRotZ);
-			tri.p[2] = multiplyMatrix(tri.p[2], matRotZ);
-
-			tri.p[0] = multiplyMatrix(tri.p[0], matRotX);
-			tri.p[1] = multiplyMatrix(tri.p[1], matRotX);
-			tri.p[2] = multiplyMatrix(tri.p[2], matRotX);
-
-			tri.p[0] = multiplyMatrix(tri.p[0], matRotY);
-			tri.p[1] = multiplyMatrix(tri.p[1], matRotY);
-			tri.p[2] = multiplyMatrix(tri.p[2], matRotY);
-
-			// Translate
-			tri.onAllPoints((p) => {
-				p.add(this.transform.position);
-			});
+			let matWorld = Mat4.makeWorld(this.transform);
+			tri.p[0] = Mat4.multiplyVector(matWorld, tri.p[0]);
+			tri.p[1] = Mat4.multiplyVector(matWorld, tri.p[1]);
+			tri.p[2] = Mat4.multiplyVector(matWorld, tri.p[2]);
 		}
 
 		this.transform.position.reset();
@@ -323,73 +387,36 @@ class Mesh {
 	}
 }
 
-const multiplyMatrix = (i, m) => {
-	let o = new Vec3(0, 0, 0);
-
-	o.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];
-	o.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + m.m[3][1];
-	o.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + m.m[3][2];
-
-	let w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + m.m[3][3];
-
-	if (w !== 0) {
-		w = 1 / w;
-		o.x *= w;
-		o.y *= w;
-		o.z *= w;
-	}
-
-	return o;
-};
-
 const processMesh = (mesh, matProj, camera) => {
 	const tris = [];
 	for (let i = mesh.tris.length - 1; i >= 0; --i) {
+
 		const tri = mesh.tris[i].clone();
 
-		// Rotate (Z -> X -> Y)
-		const matRotZ = Mat4.makeRotationZ(mesh.transform.rotation.z);
-		const matRotX = Mat4.makeRotationX(mesh.transform.rotation.x);
-		const matRotY = Mat4.makeRotationY(mesh.transform.rotation.y);
-
-		tri.p[0] = multiplyMatrix(tri.p[0], matRotZ);
-		tri.p[1] = multiplyMatrix(tri.p[1], matRotZ);
-		tri.p[2] = multiplyMatrix(tri.p[2], matRotZ);
-
-		tri.p[0] = multiplyMatrix(tri.p[0], matRotX);
-		tri.p[1] = multiplyMatrix(tri.p[1], matRotX);
-		tri.p[2] = multiplyMatrix(tri.p[2], matRotX);
-
-		tri.p[0] = multiplyMatrix(tri.p[0], matRotY);
-		tri.p[1] = multiplyMatrix(tri.p[1], matRotY);
-		tri.p[2] = multiplyMatrix(tri.p[2], matRotY);
-
-		// Translate
-		tri.onAllPoints((p) => {
-			p.add(mesh.transform.position);
-		});
+		let matWorld = Mat4.makeWorld(mesh.transform);
+		tri.p[0] = Mat4.multiplyVector(matWorld, tri.p[0]);
+		tri.p[1] = Mat4.multiplyVector(matWorld, tri.p[1]);
+		tri.p[2] = Mat4.multiplyVector(matWorld, tri.p[2]);
 
 		// Normals
-		const line1 = Vec3.subtract(tri.p[1], tri.p[0]);
-		const line2 = Vec3.subtract(tri.p[2], tri.p[0]);
+		const line1 = Vec3.sub(tri.p[1], tri.p[0]);
+		const line2 = Vec3.sub(tri.p[2], tri.p[0]);
 		const normal = Vec3.cross(line1, line2); normal.normalize();
-
-		if (Vec3.dot(normal, Vec3.subtract(tri.p[0], camera)) >= 0) continue;
+		const cameraRay = Vec3.sub(tri.p[0], camera);
+		if (Vec3.dot(normal, cameraRay) >= 0) continue;
 
 		// Illumination
 		const lightDirection = new Vec3(0, 0, -1); lightDirection.normalize();
-
 		tri.c = Vec3.dot(normal, lightDirection);
 
 		// Project triangles from 3D -> 2D
-		tri.p[0] = multiplyMatrix(tri.p[0], matProj);
-		tri.p[1] = multiplyMatrix(tri.p[1], matProj);
-		tri.p[2] = multiplyMatrix(tri.p[2], matProj);
-
-		// Scale into view (-1 to 1) -> (0 to screen size)
+		tri.p[0] = Mat4.multiplyVector(matProj, tri.p[0]);
+		tri.p[1] = Mat4.multiplyVector(matProj, tri.p[1]);
+		tri.p[2] = Mat4.multiplyVector(matProj, tri.p[2]);
 		tri.onAllPoints((p) => {
+			p.div(p.w);
 			p.addXY(1);
-			p.multiplyXY(Room.mid.w, -Room.mid.h);
+			p.mulXY(Room.mid.w, -Room.mid.h);
 			p.y += Room.h;
 		});
 
