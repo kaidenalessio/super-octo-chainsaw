@@ -54,7 +54,8 @@ class Vec3 {
 		this.x *= x;
 		this.y *= y;
 	}
-	toString() {
+	toString(fractionDigits=-1) {
+		if (fractionDigits > -1) return `(${this.x.toFixed(fractionDigits)}, ${this.y.toFixed(fractionDigits)}, ${this.z.toFixed(fractionDigits)})`;
 		return `(${this.x}, ${this.y}, ${this.z})`;
 	}
 }
@@ -316,12 +317,12 @@ const processMesh = (mesh, matProj) => {
 			p.add(mesh.transform.position);
 		});
 
-		// Project 3D -> 2D
+		// Project triangles from 3D -> 2D
 		tri.p[0] = multiplyMatrix(tri.p[0], matProj);
 		tri.p[1] = multiplyMatrix(tri.p[1], matProj);
 		tri.p[2] = multiplyMatrix(tri.p[2], matProj);
 
-		// Scale (-1 to 1) -> (0 to screen size)
+		// Scale into view (-1 to 1) -> (0 to screen size)
 		tri.onAllPoints((p) => {
 			p.addXY(1);
 			p.multiplyXY(Room.mid.w, Room.mid.h);
@@ -330,6 +331,20 @@ const processMesh = (mesh, matProj) => {
 		tris.push(tri);
 	}
 	return tris;
+};
+
+const rasterizeTriangles = (trianglesToRaster) => {
+	Draw.CTX.lineJoin = LineJoin.round;
+	Draw.CTX.strokeStyle = C.white;
+	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
+		const tri = trianglesToRaster[i];
+		Draw.CTX.beginPath();
+		Draw.CTX.moveTo(tri.p[0].x, tri.p[0].y);
+		Draw.CTX.lineTo(tri.p[1].x, tri.p[1].y);
+		Draw.CTX.lineTo(tri.p[2].x, tri.p[2].y);
+		Draw.CTX.closePath();
+		Draw.CTX.stroke();
+	}
 };
 
 let matProj = Mat4.makeProjection();
@@ -348,12 +363,14 @@ const meshRotGizmoZ = Mesh.makeTorusSmall();
 meshRotGizmoZ.transform.position.z = 5;
 meshRotGizmoZ.transform.rotation.z = 90;
 
+let showRotGizmo = true;
+
+let trianglesToRaster = [];
+
 const Game = new BranthRoom('Game');
 
-Game.render = () => {
-
+Game.update = () => {
 	const spd = 2 + Input.keyHold(KeyCode.Shift) * 8;
-
 	const input = {
 		position: new Vec3(
 			(Input.keyHold(KeyCode.D) - Input.keyHold(KeyCode.A)) * spd * 0.1,
@@ -366,6 +383,8 @@ Game.render = () => {
 			(Input.keyHold(KeyCode.C) - Input.keyHold(KeyCode.Z)) * spd
 		)
 	};
+
+	if (Input.keyDown(KeyCode.H)) showRotGizmo = !showRotGizmo;
 
 	matProj = Mat4.makeProjection(Room.h / Room.w);
 
@@ -381,29 +400,30 @@ Game.render = () => {
 	meshRotGizmoX.transform.rotation.addXY(input.rotation);
 	meshRotGizmoZ.transform.rotation.add(input.rotation);
 
-	const trianglesToRaster = processMesh(meshTri, matProj)
-		.concat(processMesh(meshRotGizmoY, matProj))
-		.concat(processMesh(meshRotGizmoX, matProj))
-		.concat(processMesh(meshRotGizmoZ, matProj));
+	trianglesToRaster.length = 0;
+	trianglesToRaster = processMesh(meshTri, matProj);
 
-	Draw.CTX.lineJoin = LineJoin.round;
-	Draw.CTX.strokeStyle = C.white;
-	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
-		const tri = trianglesToRaster[i];
-		Draw.CTX.beginPath();
-		Draw.CTX.moveTo(tri.p[0].x, tri.p[0].y);
-		Draw.CTX.lineTo(tri.p[1].x, tri.p[1].y);
-		Draw.CTX.lineTo(tri.p[2].x, tri.p[2].y);
-		Draw.CTX.closePath();
-		Draw.CTX.stroke();
+	if (showRotGizmo) {
+		trianglesToRaster = trianglesToRaster
+			.concat(processMesh(meshRotGizmoY, matProj))
+			.concat(processMesh(meshRotGizmoX, matProj))
+			.concat(processMesh(meshRotGizmoZ, matProj));
 	}
 };
 
+Game.render = () => {
+	rasterizeTriangles(trianglesToRaster);
+};
+
 Game.renderUI = () => {
-	Draw.setColor(C.white);
 	Draw.setFont(Font.m);
+	Draw.setColor(C.white);
 	Draw.setHVAlign(Align.l, Align.t);
-	Draw.text(16, 48, `${meshTri.transform.position.toString()}\n${meshTri.transform.rotation.toString()}`);
+	Draw.text(16, 48, `${meshTri.transform.position.toString(2)}\n${meshTri.transform.rotation.toString(2)}` +
+		`\nClick 'Choose File' to load an .obj model.` +
+		'\nPress <W>, <A>, <S>, <D>, <Q>, and <E> to move around.' +
+		'\nPress arrow buttons plus <Z> and <C> to rotate around.' +
+		`\nPress <H> to ${showRotGizmo? 'hide' : 'show'} rotation gizmo.`);
 };
 
 Room.add(Game);
