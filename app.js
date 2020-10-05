@@ -139,6 +139,15 @@ class Vec3 {
 			v1.x * v2.y - v1.y * v2.x
 		);
 	}
+	static get up() {
+		return new Vec3(0, 1, 0);
+	}
+	static get forward() {
+		return new Vec3(0, 0, 1);
+	}
+	static get right() {
+		return new Vec3(1, 0, 0);
+	}
 }
 
 class Triangle {
@@ -182,10 +191,10 @@ class Mat4 {
 
 	static multiplyVector(m, i) {
 		let v = new Vec3();
-		v.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];
-		v.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + m.m[3][1];
-		v.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + m.m[3][2];
-		v.w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + m.m[3][3];
+		v.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + i.w * m.m[3][0];
+		v.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + i.w * m.m[3][1];
+		v.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + i.w * m.m[3][2];
+		v.w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + i.w * m.m[3][3];
 		return v;
 	}
 
@@ -196,6 +205,15 @@ class Mat4 {
 				m.m[r][c] = m1.m[r][0] * m2.m[0][c] + m1.m[r][1] * m2.m[1][c] + m1.m[r][2] * m2.m[2][c] + m1.m[r][3] * m2.m[3][c];
 			}
 		}
+		return m;
+	}
+
+	static makeIdentity() {
+		const m = new Mat4();
+		m.m[0][0] = 1;
+		m.m[1][1] = 1;
+		m.m[2][2] = 1;
+		m.m[3][3] = 1;
 		return m;
 	}
 
@@ -268,11 +286,48 @@ class Mat4 {
 		const matRotX = Mat4.makeRotationX(transform.rotation.x);
 		const matRotY = Mat4.makeRotationY(transform.rotation.y);
 		const matTrans = Mat4.makeTranslation(transform.position);
-		let matWorld = Mat4.multiplyMatrix(matRotZ, matRotX);
-		matWorld = Mat4.multiplyMatrix(matWorld, matRotY);
-		matWorld = Mat4.multiplyMatrix(matWorld, matTrans);
+		const matWorld = Mat4.multiplyMatrix(Mat4.multiplyMatrix(Mat4.multiplyMatrix(matRotZ, matRotX), matRotY), matTrans);
 		return matWorld;
 	}
+
+	// #############################################################################################################################
+	// Code taken from https://github.com/OneLoneCoder/videos/blob/master/OneLoneCoder_olcEngine3D_Part3.cpp
+	// Author
+	// ~~~~~~
+	// Twitter: @javidx9
+	// Blog: http://www.onelonecoder.com
+	// Discord: https://discord.gg/WhwHUMV
+	static pointAt(pos, target, up)
+	{
+		// Calculate new forward direction
+		const newForward = Vec3.sub(target, pos); newForward.normalize();
+		// Calculate new Up direction
+		const newUp = Vec3.sub(up, Vec3.mul(newForward, Vec3.dot(up, newForward))); newUp.normalize();
+		// New Right direction is easy, its just cross product
+		const newRight = Vec3.cross(newUp, newForward);
+		// Construct Dimensioning and Translation Matrix
+		const m = new Mat4();
+		m.m[0][0] = newRight.x;		m.m[0][1] = newRight.y;		m.m[0][2] = newRight.z;		m.m[0][3] = 0;
+		m.m[1][0] = newUp.x;		m.m[1][1] = newUp.y;		m.m[1][2] = newUp.z;		m.m[1][3] = 0;
+		m.m[2][0] = newForward.x;	m.m[2][1] = newForward.y;	m.m[2][2] = newForward.z;	m.m[2][3] = 0;
+		m.m[3][0] = pos.x;			m.m[3][1] = pos.y;			m.m[3][2] = pos.z;			m.m[3][3] = 1;
+		return m;
+	}
+
+	static quickInverse(m) // Only for Rotation/Translation Matrices
+	{
+		const matrix = new Mat4();
+		matrix.m[0][0] = m.m[0][0]; matrix.m[0][1] = m.m[1][0]; matrix.m[0][2] = m.m[2][0]; matrix.m[0][3] = 0;
+		matrix.m[1][0] = m.m[0][1]; matrix.m[1][1] = m.m[1][1]; matrix.m[1][2] = m.m[2][1]; matrix.m[1][3] = 0;
+		matrix.m[2][0] = m.m[0][2]; matrix.m[2][1] = m.m[1][2]; matrix.m[2][2] = m.m[2][2]; matrix.m[2][3] = 0;
+		matrix.m[3][0] = -(m.m[3][0] * matrix.m[0][0] + m.m[3][1] * matrix.m[1][0] + m.m[3][2] * matrix.m[2][0]);
+		matrix.m[3][1] = -(m.m[3][0] * matrix.m[0][1] + m.m[3][1] * matrix.m[1][1] + m.m[3][2] * matrix.m[2][1]);
+		matrix.m[3][2] = -(m.m[3][0] * matrix.m[0][2] + m.m[3][1] * matrix.m[1][2] + m.m[3][2] * matrix.m[2][2]);
+		matrix.m[3][3] = 1;
+		return matrix;
+	}
+	// End of code
+	// #############################################################################################################################
 }
 
 class Mesh {
@@ -387,13 +442,14 @@ class Mesh {
 	}
 }
 
-const processMesh = (mesh, matProj, camera) => {
+const processMesh = (mesh, matProj, matView) => {
 	const tris = [];
+	const matWorld = Mat4.makeWorld(mesh.transform);
 	for (let i = mesh.tris.length - 1; i >= 0; --i) {
 
 		const tri = mesh.tris[i].clone();
 
-		let matWorld = Mat4.makeWorld(mesh.transform);
+		// Transform
 		tri.p[0] = Mat4.multiplyVector(matWorld, tri.p[0]);
 		tri.p[1] = Mat4.multiplyVector(matWorld, tri.p[1]);
 		tri.p[2] = Mat4.multiplyVector(matWorld, tri.p[2]);
@@ -402,12 +458,17 @@ const processMesh = (mesh, matProj, camera) => {
 		const line1 = Vec3.sub(tri.p[1], tri.p[0]);
 		const line2 = Vec3.sub(tri.p[2], tri.p[0]);
 		const normal = Vec3.cross(line1, line2); normal.normalize();
-		const cameraRay = Vec3.sub(tri.p[0], camera);
+		const cameraRay = Vec3.sub(tri.p[0], mainCamera.transform.position);
 		if (Vec3.dot(normal, cameraRay) >= 0) continue;
 
 		// Illumination
 		const lightDirection = new Vec3(0, 0, -1); lightDirection.normalize();
 		tri.c = Vec3.dot(normal, lightDirection);
+
+		// Convert world -> view space
+		tri.p[0] = Mat4.multiplyVector(matView, tri.p[0]);
+		tri.p[1] = Mat4.multiplyVector(matView, tri.p[1]);
+		tri.p[2] = Mat4.multiplyVector(matView, tri.p[2]);
 
 		// Project triangles from 3D -> 2D
 		tri.p[0] = Mat4.multiplyVector(matProj, tri.p[0]);
@@ -453,24 +514,20 @@ const rasterizeTriangles = (trianglesToRaster) => {
 
 let matProj = Mat4.makeProjection();
 
-let mainCamera = new Vec3(0, 0, 0);
+let mainCamera = {
+	lookDir: new Vec3(),
+	lookDirRight: new Vec3(),
+	transform: {
+		position: new Vec3(0, 0, 0),
+		// pitch, yaw, roll
+		rotation: new Vec3(0, 0, 0)
+	}
+};
 
 const meshTri = Mesh.makeCube();
 meshTri.transform.position.z = 5;
 
-const meshRotGizmoY = Mesh.makeTorusLarge();
-meshRotGizmoY.transform.position.z = 5;
-meshRotGizmoY.transform.rotation.x = 90;
-
-const meshRotGizmoX = Mesh.makeTorusMedium();
-meshRotGizmoX.transform.position.z = 5;
-
-const meshRotGizmoZ = Mesh.makeTorusSmall();
-meshRotGizmoZ.transform.position.z = 5;
-meshRotGizmoZ.transform.rotation.z = 90;
-
 let showOutline = false;
-let showRotGizmo = false;
 
 let optResNames = ['Low', 'Normal', 'High', 'Ultra'];
 let optResIndex = 1;
@@ -479,23 +536,38 @@ let trianglesToRaster = [];
 
 const Game = new BranthRoom('Game');
 
-Game.update = () => {
-	const spd = 2 + Input.keyHold(KeyCode.Shift) * 8;
-	const input = {
-		position: new Vec3(
-			(Input.keyHold(KeyCode.D) - Input.keyHold(KeyCode.A)) * spd * 0.1,
-			(Input.keyHold(KeyCode.E) - Input.keyHold(KeyCode.Q)) * spd * 0.1,
-			(Input.keyHold(KeyCode.W) - Input.keyHold(KeyCode.S)) * spd * 0.1
-		),
-		rotation: new Vec3(
-			(Input.keyHold(KeyCode.Up) - Input.keyHold(KeyCode.Down)) * spd,
-			(Input.keyHold(KeyCode.Left) - Input.keyHold(KeyCode.Right)) * spd,
-			(Input.keyHold(KeyCode.Z) - Input.keyHold(KeyCode.C)) * spd
-		)
-	};
+const updateInputs = () => {
+	const spd = (0.2 + Input.keyHold(KeyCode.Shift) * 0.8) * Time.scaledDeltaTime;
 
-	if (Input.keyDown(KeyCode.U)) showOutline = !showOutline;
-	if (Input.keyDown(KeyCode.H)) showRotGizmo = !showRotGizmo;
+	const forward = Vec3.mul(mainCamera.lookDir, spd);
+	const right = Vec3.mul(mainCamera.lookDirRight, spd);
+
+	// Up and down
+	mainCamera.transform.position.y += (Input.keyHold(KeyCode.E) - Input.keyHold(KeyCode.Q)) * spd;
+
+	// Move
+	if (Input.keyHold(KeyCode.W)) {
+		mainCamera.transform.position.add(forward);
+	}
+
+	if (Input.keyHold(KeyCode.S)) {
+		mainCamera.transform.position.sub(forward);
+	}
+
+	if (Input.keyHold(KeyCode.D)) {
+		mainCamera.transform.position.add(right);
+	}
+
+	if (Input.keyHold(KeyCode.A)) {
+		mainCamera.transform.position.sub(right);
+	}
+
+	// Look around
+	mainCamera.transform.rotation.x += (Input.keyHold(KeyCode.Down) - Input.keyHold(KeyCode.Up)) * spd * 10;
+	mainCamera.transform.rotation.y += (Input.keyHold(KeyCode.Right) - Input.keyHold(KeyCode.Left)) * spd * 10;
+
+	// Debug
+	if (Input.keyDown(KeyCode.O)) showOutline = !showOutline;
 	if (Input.keyDown(KeyCode.L)) {
 		if (++optResIndex > 3) optResIndex = 0;
 		switch (optResIndex) {
@@ -506,30 +578,24 @@ Game.update = () => {
 		}
 		Room.resize();
 	}
+};
+
+Game.update = () => {
+	const matCameraRot = Mat4.multiplyMatrix(Mat4.makeRotationX(mainCamera.transform.rotation.x), Mat4.makeRotationY(mainCamera.transform.rotation.y));
+
+	mainCamera.lookDir = Mat4.multiplyVector(matCameraRot, Vec3.forward);
+	mainCamera.lookDirRight = Mat4.multiplyVector(matCameraRot, Vec3.right);
+
+	const target = Vec3.add(mainCamera.transform.position, mainCamera.lookDir);
+	const matCamera = Mat4.pointAt(mainCamera.transform.position, target, Vec3.up);
+	const matView = Mat4.quickInverse(matCamera);
+
+	updateInputs();
 
 	matProj = Mat4.makeProjection(Room.h / Room.w);
 
-	meshTri.transform.position.add(input.position);
-	meshTri.transform.rotation.add(input.rotation);
-
-	meshRotGizmoY.transform.position.add(input.position);
-	meshRotGizmoX.transform.position.add(input.position);
-	meshRotGizmoZ.transform.position.add(input.position);
-
-	meshRotGizmoY.transform.rotation.y += input.rotation.y;
-
-	meshRotGizmoX.transform.rotation.addXY(input.rotation);
-	meshRotGizmoZ.transform.rotation.add(input.rotation);
-
 	trianglesToRaster.length = 0;
-	trianglesToRaster = processMesh(meshTri, matProj, mainCamera);
-
-	if (showRotGizmo) {
-		trianglesToRaster = trianglesToRaster
-			.concat(processMesh(meshRotGizmoY, matProj, mainCamera))
-			.concat(processMesh(meshRotGizmoX, matProj, mainCamera))
-			.concat(processMesh(meshRotGizmoZ, matProj, mainCamera));
-	}
+	trianglesToRaster = processMesh(meshTri, matProj, matView);
 };
 
 Game.render = () => {
@@ -537,16 +603,17 @@ Game.render = () => {
 };
 
 Game.renderUI = () => {
+	if (GLOBAL.debugMode % 2 !== 0) return;
 	Draw.setFont(Font.m);
 	Draw.setColor(C.white);
 	Draw.setHVAlign(Align.l, Align.t);
 	Draw.text(16, 48, Time.FPS +
-		`\n${meshTri.transform.position.toString(2)}\n${meshTri.transform.rotation.toString(2)}` +
+		`\n${mainCamera.transform.position.toString(2)}\n${mainCamera.transform.rotation.toString(2)}` +
 		`\nClick 'Choose File' to load an .obj model.` +
 		'\nPress <W>, <A>, <S>, <D>, <Q>, and <E> to move around.' +
-		'\nPress arrow buttons plus <Z> and <C> to rotate around.' +
-		`\nPress <U> to ${showOutline? 'hide' : 'show'} outline.` +
-		`\nPress <H> to ${showRotGizmo? 'hide' : 'show'} rotation gizmo.` +
+		'\nPress arrow buttons look around.' +
+		`\nPress <O> to ${showOutline? 'hide' : 'show'} outline.` +
+		`\nPress <U> to hide this info.` +
 		`\nPress <L> to change resolution (${optResNames[optResIndex]}).`);
 };
 
