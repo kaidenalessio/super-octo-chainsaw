@@ -148,6 +148,28 @@ class Vec3 {
 	static get right() {
 		return new Vec3(1, 0, 0);
 	}
+	static get zero() {
+		return new Vec3(0, 0, 0);
+	}
+	// #### From javid #####
+	// https://github.com/OneLoneCoder/videos/blob/master/OneLoneCoder_olcEngine3D_Part3.cpp
+	static intersectPlane(plane_p, plane_n, lineStart, lineEnd)
+	{
+		plane_n.normalize();
+		const plane_d = -Vec3.dot(plane_n, plane_p);
+		const ad = Vec3.dot(lineStart, plane_n);
+		const bd = Vec3.dot(lineEnd, plane_n);
+		const t = (-plane_d - ad) / (bd - ad);
+		const lineStartToEnd = Vec3.sub(lineEnd, lineStart);
+		const lineToIntersect = Vec3.mul(lineStartToEnd, t);
+		return Vec3.add(lineStart, lineToIntersect);
+	}
+	// #####################
+	static normalize(i) {
+		const v = i.clone();
+		v.normalize();
+		return v;
+	}
 }
 
 class Triangle {
@@ -155,17 +177,22 @@ class Triangle {
 	 * @param {object} points Array of `Vec3`.
 	 */
 	constructor(points) {
-		this.p = points;
+		this.p = points || [Vec3.zero, Vec3.zero, Vec3.zero];
 		this.c = 0;
-		this.zMid = 0;
+		this.dp = 0;
+		this.depth = 0;
 	}
 
 	clone() {
-		return new Triangle([
+		const t = new Triangle([
 			this.p[0].clone(),
 			this.p[1].clone(),
 			this.p[2].clone()
 		]);
+		t.c = this.c;
+		t.dp = this.dp;
+		t.depth = this.depth;
+		return t;
 	}
 
 	onAllPoints(fn) {
@@ -174,9 +201,66 @@ class Triangle {
 		}
 	}
 
-	calculateZMid() {
-		this.zMid =  (this.p[0].z + this.p[1].z + this.p[2].z) * 0.3333333333333333;
+	calculateDepth() {
+		this.depth =  (this.p[0].z + this.p[1].z + this.p[2].z) * 0.3333333333333333;
 	}
+
+	// #### From javid #####
+	// https://github.com/OneLoneCoder/videos/blob/master/OneLoneCoder_olcEngine3D_Part3.cpp
+	static clipAgainstPlane(plane_p, plane_n, in_tri, out_tris)
+	{
+		plane_n.normalize();
+
+		const dist = (p) => {
+			// const n = Vec3.normalize(p);
+			return (Vec3.dot(plane_n, p) - Vec3.dot(plane_n, plane_p));
+		};
+
+		const inside_points = []; let nInsidePointCount = 0;
+		const outside_points = []; let nOutsidePointCount = 0;
+
+		const d0 = dist(in_tri.p[0]);
+		const d1 = dist(in_tri.p[1]);
+		const d2 = dist(in_tri.p[2]);
+
+		if (d0 >= 0) { inside_points[nInsidePointCount++] = in_tri.p[0]; }
+		else { outside_points[nOutsidePointCount++] = in_tri.p[0]; }
+		if (d1 >= 0) { inside_points[nInsidePointCount++] = in_tri.p[1]; }
+		else { outside_points[nOutsidePointCount++] = in_tri.p[1]; }
+		if (d2 >= 0) { inside_points[nInsidePointCount++] = in_tri.p[2]; }
+		else { outside_points[nOutsidePointCount++] = in_tri.p[2]; }
+
+		if (nInsidePointCount == 0) {
+			return 0;
+		}
+
+		if (nInsidePointCount == 3) {
+			out_tris[0] = in_tri;
+			return 1;
+		}
+
+		if (nInsidePointCount == 1 && nOutsidePointCount == 2) {
+			out_tris[0].c = debugClipping? C.blue : in_tri.c;
+			out_tris[0].p[0] = inside_points[0];
+			out_tris[0].p[1] = Vec3.intersectPlane(plane_p, plane_n, inside_points[0], outside_points[0]);
+			out_tris[0].p[2] = Vec3.intersectPlane(plane_p, plane_n, inside_points[0], outside_points[1]);
+			return 1;
+		}
+
+		if (nInsidePointCount == 2 && nOutsidePointCount == 1)
+		{
+			out_tris[0].c = debugClipping? C.blue : in_tri.c;
+			out_tris[1].c = debugClipping? C.red : in_tri.c;
+			out_tris[0].p[0] = inside_points[0];
+			out_tris[0].p[1] = inside_points[1];
+			out_tris[0].p[2] = Vec3.intersectPlane(plane_p, plane_n, inside_points[0], outside_points[0]);
+			out_tris[1].p[0] = inside_points[1];
+			out_tris[1].p[1] = out_tris[0].p[2];
+			out_tris[1].p[2] = Vec3.intersectPlane(plane_p, plane_n, inside_points[1], outside_points[0]);
+			return 2;
+		}
+	}
+	// #####################
 }
 
 class Mat4 {
@@ -447,6 +531,8 @@ const processMesh = (mesh, matProj, matView) => {
 	const matWorld = Mat4.makeWorld(mesh.transform);
 	for (let i = mesh.tris.length - 1; i >= 0; --i) {
 
+		totalTris++;
+
 		const tri = mesh.tris[i].clone();
 
 		// Transform
@@ -463,51 +549,88 @@ const processMesh = (mesh, matProj, matView) => {
 
 		// Illumination
 		const lightDirection = new Vec3(0, 0, -1); lightDirection.normalize();
-		tri.c = Vec3.dot(normal, lightDirection);
+		tri.dp = Vec3.dot(normal, lightDirection);
+		const c = 50 + tri.dp * 205;
+		tri.c = `rgb(${c}, ${c}, ${c * 0.5})`;
 
 		// Convert world -> view space
 		tri.p[0] = Mat4.multiplyVector(matView, tri.p[0]);
 		tri.p[1] = Mat4.multiplyVector(matView, tri.p[1]);
 		tri.p[2] = Mat4.multiplyVector(matView, tri.p[2]);
 
-		// Project triangles from 3D -> 2D
-		tri.p[0] = Mat4.multiplyVector(matProj, tri.p[0]);
-		tri.p[1] = Mat4.multiplyVector(matProj, tri.p[1]);
-		tri.p[2] = Mat4.multiplyVector(matProj, tri.p[2]);
-		tri.onAllPoints((p) => {
-			p.div(p.w);
-			p.addXY(1);
-			p.mulXY(Room.mid.w, -Room.mid.h);
-			p.y += Room.h;
-		});
+		let clippedCount = 0;
+		const clipped = [new Triangle(), new Triangle()];
+		clippedCount = Triangle.clipAgainstPlane(new Vec3(0, 0, 0.1), Vec3.forward, tri, clipped);
 
-		tri.calculateZMid();
+		let triProjected = tri.clone();
 
-		tris.push(tri);
+		for (let i = 0; i < clippedCount; i++) {
+
+			// Project triangles from 3D -> 2D
+			triProjected.p[0] = Mat4.multiplyVector(matProj, clipped[i].p[0]);
+			triProjected.p[1] = Mat4.multiplyVector(matProj, clipped[i].p[1]);
+			triProjected.p[2] = Mat4.multiplyVector(matProj, clipped[i].p[2]);
+			triProjected.onAllPoints((p) => {
+				p.div(p.w);
+				p.addXY(1);
+				p.mulXY(Room.mid.w, -Room.mid.h);
+				p.y += Room.h;
+			});
+
+			triProjected.calculateDepth();
+
+			tris.push(triProjected);
+		}
 	}
 	return tris;
 };
 
 const rasterizeTriangles = (trianglesToRaster) => {
-	trianglesToRaster.sort((a, b) => a.zMid < b.zMid? -1 : 1);
+	trianglesToRaster.sort((a, b) => a.depth < b.depth? -1 : 1);
 
 	Draw.CTX.lineJoin = LineJoin.round;
 	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
-		const tri = trianglesToRaster[i];
-		Draw.CTX.beginPath();
-		Draw.CTX.moveTo(tri.p[0].x, tri.p[0].y);
-		Draw.CTX.lineTo(tri.p[1].x, tri.p[1].y);
-		Draw.CTX.lineTo(tri.p[2].x, tri.p[2].y);
-		Draw.CTX.closePath();
-
-		const c = 50 + tri.c * 205;
-		Draw.setColor(`rgb(${c}, ${c}, ${c * 0.5})`);
-		Draw.CTX.fill();
-		Draw.CTX.stroke();
-
-		if (showOutline) {
-			Draw.CTX.strokeStyle = C.black;
+		const triToRaster = trianglesToRaster[i];
+		const clipped = [new Triangle(), new Triangle()];
+		const listTriangles = [];
+		listTriangles.push(triToRaster);
+		let nNewTriangles = 1;
+		for (let p = 0; p < 4; p++)
+		{
+			let nTrisToAdd = 0;
+			while (nNewTriangles > 0)
+			{
+				const test = listTriangles[0];
+				listTriangles.shift();
+				nNewTriangles--;
+				switch (p)
+				{
+					case 0:	nTrisToAdd = Triangle.clipAgainstPlane(Vec3.zero, Vec3.up, test, clipped); break;
+					case 1:	nTrisToAdd = Triangle.clipAgainstPlane(new Vec3(0, Room.h - 1, 0), new Vec3(0, -1, 0), test, clipped); break;
+					case 2:	nTrisToAdd = Triangle.clipAgainstPlane(Vec3.zero, Vec3.right, test, clipped); break;
+					case 3:	nTrisToAdd = Triangle.clipAgainstPlane(new Vec3(Room.w - 1, 0, 0), new Vec3(-1, 0, 0), test, clipped); break;
+				}
+				for (let w = 0; w < nTrisToAdd; w++) {
+					listTriangles.push(clipped[w]);
+				}
+			}
+			nNewTriangles = listTriangles.length;
+		}
+		for (const t of listTriangles)
+		{
+			Draw.CTX.beginPath();
+			Draw.CTX.moveTo(t.p[0].x, t.p[0].y);
+			Draw.CTX.lineTo(t.p[1].x, t.p[1].y);
+			Draw.CTX.lineTo(t.p[2].x, t.p[2].y);
+			Draw.CTX.closePath();
+			Draw.setColor(t.c);
+			Draw.CTX.fill();
 			Draw.CTX.stroke();
+			if (showOutline) {
+				Draw.CTX.strokeStyle = C.black;
+				Draw.CTX.stroke();
+			}
+			totalTrisRasterized++;
 		}
 	}
 };
@@ -528,22 +651,26 @@ const meshTri = Mesh.makeCube();
 meshTri.transform.position.z = 5;
 
 let showOutline = false;
+let debugClipping = true;
 
 let optResNames = ['Low', 'Normal', 'High', 'Ultra'];
 let optResIndex = 1;
 
 let trianglesToRaster = [];
 
+let totalTris = 0;
+let totalTrisRasterized = 0;
+
 const Game = new BranthRoom('Game');
 
 const updateInputs = () => {
 	const spd = (0.2 + Input.keyHold(KeyCode.Shift) * 0.8) * Time.scaledDeltaTime;
 
-	const forward = Vec3.mul(mainCamera.lookDir, spd);
-	const right = Vec3.mul(mainCamera.lookDirRight, spd);
+	const forward = Vec3.mul(mainCamera.lookDir, spd * 0.1);
+	const right = Vec3.mul(mainCamera.lookDirRight, spd * 0.1);
 
 	// Up and down
-	mainCamera.transform.position.y += (Input.keyHold(KeyCode.E) - Input.keyHold(KeyCode.Q)) * spd;
+	mainCamera.transform.position.y += (Input.keyHold(KeyCode.E) - Input.keyHold(KeyCode.Q)) * spd * 0.1;
 
 	// Move
 	if (Input.keyHold(KeyCode.W)) {
@@ -563,11 +690,12 @@ const updateInputs = () => {
 	}
 
 	// Look around
-	mainCamera.transform.rotation.x += (Input.keyHold(KeyCode.Down) - Input.keyHold(KeyCode.Up)) * spd * 10;
-	mainCamera.transform.rotation.y += (Input.keyHold(KeyCode.Right) - Input.keyHold(KeyCode.Left)) * spd * 10;
+	mainCamera.transform.rotation.x += (Input.keyHold(KeyCode.Down) - Input.keyHold(KeyCode.Up)) * spd;
+	mainCamera.transform.rotation.y += (Input.keyHold(KeyCode.Right) - Input.keyHold(KeyCode.Left)) * spd;
 
 	// Debug
 	if (Input.keyDown(KeyCode.O)) showOutline = !showOutline;
+	if (Input.keyDown(KeyCode.M)) debugClipping = !debugClipping;
 	if (Input.keyDown(KeyCode.L)) {
 		if (++optResIndex > 3) optResIndex = 0;
 		switch (optResIndex) {
@@ -581,6 +709,9 @@ const updateInputs = () => {
 };
 
 Game.update = () => {
+	totalTris = 0;
+	totalTrisRasterized = 0;
+
 	const matCameraRot = Mat4.multiplyMatrix(Mat4.makeRotationX(mainCamera.transform.rotation.x), Mat4.makeRotationY(mainCamera.transform.rotation.y));
 
 	mainCamera.lookDir = Mat4.multiplyVector(matCameraRot, Vec3.forward);
@@ -592,7 +723,7 @@ Game.update = () => {
 
 	updateInputs();
 
-	matProj = Mat4.makeProjection(Room.h / Room.w);
+	matProj = Mat4.makeProjection(Room.h / Room.w, 70);
 
 	trianglesToRaster.length = 0;
 	trianglesToRaster = processMesh(meshTri, matProj, matView);
@@ -609,10 +740,12 @@ Game.renderUI = () => {
 	Draw.setHVAlign(Align.l, Align.t);
 	Draw.text(16, 48, Time.FPS +
 		`\n${mainCamera.transform.position.toString(2)}\n${mainCamera.transform.rotation.toString(2)}` +
+		`\nTotal tris: ${totalTris}\nRasterized tris: ${totalTrisRasterized}` +
 		`\nClick 'Choose File' to load an .obj model.` +
 		'\nPress <W>, <A>, <S>, <D>, <Q>, and <E> to move around.' +
 		'\nPress arrow buttons look around.' +
 		`\nPress <O> to ${showOutline? 'hide' : 'show'} outline.` +
+		`\nPress <M> to ${debugClipping? 'disable' : 'enable'} debug clipping.` +
 		`\nPress <U> to hide this info.` +
 		`\nPress <L> to change resolution (${optResNames[optResIndex]}).`);
 };
