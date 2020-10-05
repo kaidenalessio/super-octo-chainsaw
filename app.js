@@ -1,3 +1,10 @@
+Sound.add('r99', 'r99.mp3');
+Sound.add('reload', 'reload.mp3');
+
+const makeHueBright = (c, b) => {
+	return `rgb(${c.r * b}, ${c.g * b}, ${c.b * b})`;
+};
+
 class Vec3 {
 	constructor(x, y, z) {
 		this.x = x || 0;
@@ -12,6 +19,18 @@ class Vec3 {
 		this.x = 0;
 		this.y = 0;
 		this.z = 0;
+	}
+	set(x, y, z) {
+		if (x instanceof Vec3) {
+			z = x.z;
+			y = x.y;
+			x = x.x;
+		}
+		if (y === undefined) y = x;
+		if (z === undefined) z = x;
+		this.x = x;
+		this.y = y;
+		this.z = z;
 	}
 	add(x, y, z) {
 		if (x instanceof Vec3) {
@@ -138,6 +157,16 @@ class Vec3 {
 			v1.z * v2.x - v1.x * v2.z,
 			v1.x * v2.y - v1.y * v2.x
 		);
+	}
+	static random(x=1, y, z) {
+		if (x instanceof Vec3) {
+			z = x.z;
+			y = x.y;
+			x = x.x;
+		}
+		if (y === undefined) y = x;
+		if (z === undefined) z = x;
+		return new Vec3(Math.range(-x, x), Math.range(-y, y), Math.range(-z, z));
 	}
 	static get up() {
 		return new Vec3(0, 1, 0);
@@ -435,6 +464,10 @@ class Mesh {
 		}
 	}
 
+	contains(p) {
+		return p.z > this.transform.position.z && p.x > -0.5 && p.x < 0.5 && p.y > -0.5 && p.y < 0.5;
+	}
+
 	applyTransform() {
 		for (let i = this.tris.length - 1; i >= 0; --i) {
 			const tri = this.tris[i];
@@ -524,9 +557,13 @@ class Mesh {
 	static makeTorusSmall() {
 		return Mesh.LoadFromFile(`# Blender v2.90.1 OBJ File: '' # www.blender.org o Cube v 1.638400 0.000000 0.000000 v 1.600000 -0.066511 0.000000 v 1.523200 -0.066511 0.000000 v 1.484800 -0.000000 0.000000 v 1.523200 0.066511 0.000000 v 1.600000 0.066511 0.000000 v 1.418896 0.000000 0.819200 v 1.385641 -0.066511 0.800000 v 1.319130 -0.066511 0.761600 v 1.285874 -0.000000 0.742400 v 1.319130 0.066511 0.761600 v 1.385641 0.066511 0.800000 v 0.819200 0.000000 1.418896 v 0.800000 -0.066511 1.385641 v 0.761600 -0.066511 1.319130 v 0.742400 -0.000000 1.285875 v 0.761600 0.066511 1.319130 v 0.800000 0.066511 1.385641 v 0.000000 0.000000 1.638400 v 0.000000 -0.066511 1.600000 v 0.000000 -0.066511 1.523200 v 0.000000 -0.000000 1.484800 v 0.000000 0.066511 1.523200 v 0.000000 0.066511 1.600000 v -0.819200 0.000000 1.418896 v -0.800000 -0.066511 1.385641 v -0.761600 -0.066511 1.319130 v -0.742400 -0.000000 1.285875 v -0.761600 0.066511 1.319130 v -0.800000 0.066511 1.385641 v -1.418896 0.000000 0.819200 v -1.385641 -0.066511 0.800000 v -1.319130 -0.066511 0.761600 v -1.285874 -0.000000 0.742400 v -1.319130 0.066511 0.761600 v -1.385641 0.066511 0.800000 v -1.638400 0.000000 0.000000 v -1.600000 -0.066511 0.000000 v -1.523200 -0.066511 0.000000 v -1.484800 -0.000000 0.000000 v -1.523200 0.066511 0.000000 v -1.600000 0.066511 0.000000 v -1.418896 0.000000 -0.819200 v -1.385641 -0.066511 -0.800000 v -1.319130 -0.066511 -0.761600 v -1.285875 -0.000000 -0.742400 v -1.319130 0.066511 -0.761600 v -1.385641 0.066511 -0.800000 v -0.819200 0.000000 -1.418896 v -0.800000 -0.066511 -1.385641 v -0.761600 -0.066511 -1.319130 v -0.742400 -0.000000 -1.285875 v -0.761600 0.066511 -1.319130 v -0.800000 0.066511 -1.385641 v 0.000000 0.000000 -1.638400 v 0.000000 -0.066511 -1.600000 v 0.000000 -0.066511 -1.523200 v 0.000000 -0.000000 -1.484800 v 0.000000 0.066511 -1.523200 v 0.000000 0.066511 -1.600000 v 0.819200 0.000000 -1.418896 v 0.800000 -0.066511 -1.385641 v 0.761600 -0.066511 -1.319130 v 0.742400 -0.000000 -1.285875 v 0.761600 0.066511 -1.319130 v 0.800000 0.066511 -1.385641 v 1.418896 0.000000 -0.819200 v 1.385641 -0.066511 -0.800000 v 1.319130 -0.066511 -0.761600 v 1.285874 -0.000000 -0.742400 v 1.319130 0.066511 -0.761600 v 1.385641 0.066511 -0.800000 s off f 7 2 1 f 8 3 2 f 9 4 3 f 10 5 4 f 11 6 5 f 12 1 6 f 7 14 8 f 14 9 8 f 15 10 9 f 16 11 10 f 11 18 12 f 18 7 12 f 19 14 13 f 20 15 14 f 21 16 15 f 22 17 16 f 23 18 17 f 24 13 18 f 25 20 19 f 26 21 20 f 21 28 22 f 28 23 22 f 23 30 24 f 24 25 19 f 31 26 25 f 32 27 26 f 33 28 27 f 34 29 28 f 29 36 30 f 36 25 30 f 37 32 31 f 38 33 32 f 39 34 33 f 40 35 34 f 41 36 35 f 42 31 36 f 43 38 37 f 44 39 38 f 45 40 39 f 46 41 40 f 47 42 41 f 48 37 42 f 43 50 44 f 44 51 45 f 51 46 45 f 52 47 46 f 47 54 48 f 48 49 43 f 55 50 49 f 50 57 51 f 51 58 52 f 58 53 52 f 59 54 53 f 60 49 54 f 61 56 55 f 56 63 57 f 63 58 57 f 64 59 58 f 65 60 59 f 66 55 60 f 67 62 61 f 62 69 63 f 69 64 63 f 64 71 65 f 71 66 65 f 72 61 66 f 1 68 67 f 2 69 68 f 3 70 69 f 4 71 70 f 5 72 71 f 6 67 72 f 7 8 2 f 8 9 3 f 9 10 4 f 10 11 5 f 11 12 6 f 12 7 1 f 7 13 14 f 14 15 9 f 15 16 10 f 16 17 11 f 11 17 18 f 18 13 7 f 19 20 14 f 20 21 15 f 21 22 16 f 22 23 17 f 23 24 18 f 24 19 13 f 25 26 20 f 26 27 21 f 21 27 28 f 28 29 23 f 23 29 30 f 24 30 25 f 31 32 26 f 32 33 27 f 33 34 28 f 34 35 29 f 29 35 36 f 36 31 25 f 37 38 32 f 38 39 33 f 39 40 34 f 40 41 35 f 41 42 36 f 42 37 31 f 43 44 38 f 44 45 39 f 45 46 40 f 46 47 41 f 47 48 42 f 48 43 37 f 43 49 50 f 44 50 51 f 51 52 46 f 52 53 47 f 47 53 54 f 48 54 49 f 55 56 50 f 50 56 57 f 51 57 58 f 58 59 53 f 59 60 54 f 60 55 49 f 61 62 56 f 56 62 63 f 63 64 58 f 64 65 59 f 65 66 60 f 66 61 55 f 67 68 62 f 62 68 69 f 69 70 64 f 64 70 71 f 71 72 66 f 72 67 61 f 1 2 68 f 2 3 69 f 3 4 70 f 4 5 71 f 5 6 72 f 6 1 67`);
 	}
+
+	static makeBullet() {
+		return Mesh.LoadFromFile('v 0.05 -0.05 -0.1 v 0.05 0.05 -0.1 v 0.02 -0.02 0.1 v 0.02 0.02 0.1 v -0.05 -0.05 -0.1 v -0.05 0.05 -0.1 v -0.02 -0.02 0.1 v -0.02 0.02 0.1 f 2 3 1 f 4 7 3 f 8 5 7 f 6 1 5 f 7 1 3 f 4 6 8 f 2 4 3 f 4 8 7 f 8 6 5 f 6 2 1 f 7 5 1 f 4 2 6');
+	}
 }
 
-const processMesh = (mesh, matProj, matView) => {
+const processMesh = (mesh, matProj, matView, hue=new Vec3(1, 1, 0.5)) => {
 	const tris = [];
 	const matWorld = Mat4.makeWorld(mesh.transform);
 	for (let i = mesh.tris.length - 1; i >= 0; --i) {
@@ -551,7 +588,7 @@ const processMesh = (mesh, matProj, matView) => {
 		const lightDirection = new Vec3(0, 0, -1); lightDirection.normalize();
 		tri.dp = Vec3.dot(normal, lightDirection);
 		const c = 50 + tri.dp * 205;
-		tri.c = `rgb(${c}, ${c}, ${c * 0.5})`;
+		tri.c = `rgb(${c*hue.x}, ${c*hue.y}, ${c*hue.z})`;
 
 		// Convert world -> view space
 		tri.p[0] = Mat4.multiplyVector(matView, tri.p[0]);
@@ -647,11 +684,43 @@ let mainCamera = {
 	}
 };
 
+class Bullet {
+	constructor() {
+		this.id = 0;
+		this.mesh = Mesh.makeBullet();
+		this.velocity = new Vec3();
+		this.alarm = 0;
+	}
+}
+
+let bulletId = 0;
+let bulletTime = 0;
+const bullets = [];
+
+const createBullet = () => {
+	const b = new Bullet();
+	b.id = bulletId++;
+	bullets.push(b);
+	return b;
+};
+
+const destroyBullet = (id) => {
+	for (var i = bullets.length - 1; i >= 0; --i) {
+		const b = bullets[i];
+		if (b.id === id) {
+			return bullets.splice(i, 1)[0];
+		}
+	}
+	return null;
+};
+
 const meshTri = Mesh.makeCube();
 meshTri.transform.position.z = 5;
 
 let showOutline = false;
-let debugClipping = true;
+let debugClipping = false;
+
+GLOBAL.debugMode = 0;
 
 let optResNames = ['Low', 'Normal', 'High', 'Ultra'];
 let optResIndex = 1;
@@ -661,16 +730,88 @@ let trianglesToRaster = [];
 let totalTris = 0;
 let totalTrisRasterized = 0;
 
+const mousePosition = new Vector2(0, 0);
+const prevMousePosition = new Vector2(0, 0);
+
+let mouseSensitivity = 0.2;
+
+let matCameraRot = Vec3.forward;
+
+let groundY = 0;
+
 const Game = new BranthRoom('Game');
 
-const updateInputs = () => {
-	const spd = (0.2 + Input.keyHold(KeyCode.Shift) * 0.8) * Time.scaledDeltaTime;
+const player = {
+	vsp: 0,
+	ads: 0,
+	fov: 90,
+	scope: 20,
+	scopeRange: {
+		min: 20,
+		max: 70,
+		diff: 50
+	},
+	scopeScale: 0,
+	jumpSpd: 0.1,
+	gravity: 0.003,
+	isShooting: false,
+	bulletSpeed: 4,
+	bulletOffset: 0,
+	bulletGravity: 0.001,
+	ammo: 32,
+	ammoCap: 32,
+	ammoCount: 360,
+	reloading: false,
+	reloadTime: 1384,
+	runReload() {
+		if (this.ammoCount > 0 && !this.reloading && this.ammo < this.ammoCap) {
+			this.isShooting = false;
+			this.reloading = true;
+			Sound.play('reload');
+			_this = this;
+			window.setTimeout(function() {
+				const ammoReloaded = _this.ammoCap - _this.ammo;
+				_this.ammo += Math.min(_this.ammoCount, ammoReloaded);
+				_this.ammoCount = Math.max(0, _this.ammoCount - ammoReloaded);
+				_this.reloading = false;
+			}, this.reloadTime);
+		}
+	}
+};
 
-	const forward = Vec3.mul(mainCamera.lookDir, spd * 0.1);
-	const right = Vec3.mul(mainCamera.lookDirRight, spd * 0.1);
+const mouseMoveEvent = (e) => {
+	const mouseDiff = new Vector2(e.movementX, e.movementY);
+	mainCamera.transform.rotation.x += mouseDiff.y * mouseSensitivity;
+	mainCamera.transform.rotation.y += mouseDiff.x * mouseSensitivity;
+};
+
+const mouseWheelEvent = (e) => {
+	if (player.ads > 0.1) {
+		player.scope = Math.clamp(player.scope - Math.sign(e.deltaY) * 5, player.scopeRange.min, player.scopeRange.max);
+	}
+};
+
+let shootTime = 0;
+
+const updateInputs = () => {
+	prevMousePosition.set(mousePosition);
+	mousePosition.set(Input.mousePosition);
+
+	player.scopeScale = (player.scope - player.scopeRange.min) / player.scopeRange.diff;
+
+	const spd = (0.5 + (Input.keyHold(KeyCode.Shift) && (player.ads < 0.1)) * 0.5) * Time.scaledDeltaTime;
+
+	const forward = Vec3.mul(mainCamera.lookDir, spd * 0.05);
+	const right = Vec3.mul(mainCamera.lookDirRight, spd * 0.05);
+
+	// breath
+	let sprintingShake = 0.1 * ((spd * 2) - 1);
+	if (!(Input.keyHold(KeyCode.W) || Input.keyHold(KeyCode.S) || Input.keyHold(KeyCode.D) || Input.keyHold(KeyCode.A))) sprintingShake = 0;
+	mainCamera.transform.rotation.x += Math.cos(Time.time * (0.005 + sprintingShake * 0.1)) * (0.01 + sprintingShake * 2);
+	mainCamera.transform.rotation.y += Math.sin(Time.time * (0.005 + sprintingShake * 0.1)) * (0.01 + sprintingShake);
 
 	// Up and down
-	mainCamera.transform.position.y += (Input.keyHold(KeyCode.E) - Input.keyHold(KeyCode.Q)) * spd * 0.1;
+	groundY += (Input.keyHold(KeyCode.E) - Input.keyHold(KeyCode.Q)) * spd * 0.1;
 
 	// Move
 	if (Input.keyHold(KeyCode.W)) {
@@ -689,9 +830,80 @@ const updateInputs = () => {
 		mainCamera.transform.position.sub(right);
 	}
 
-	// Look around
-	mainCamera.transform.rotation.x += (Input.keyHold(KeyCode.Down) - Input.keyHold(KeyCode.Up)) * spd;
-	mainCamera.transform.rotation.y += (Input.keyHold(KeyCode.Right) - Input.keyHold(KeyCode.Left)) * spd;
+	if (Input.keyDown(KeyCode.Space)) {
+		player.vsp = player.jumpSpd;
+	}
+
+	player.vsp -= player.gravity;
+
+	mainCamera.transform.position.y += player.vsp;
+	if (mainCamera.transform.position.y <= groundY) {
+		mainCamera.transform.position.y = groundY;
+	}
+
+	// ads
+	player.ads = Math.range(player.ads, Input.mouseHold(2), 0.8);
+
+	player.fov = 90 - player.scope * player.ads;
+
+	// pewpew
+	if (player.isShooting && Input.mouseHold(0) && Time.time > bulletTime && !player.reloading) {
+		if (player.ammo > 0) {
+			Emitter.preset('shell');
+			let shellSize = 8;
+			if (player.ads > 0.1) shellSize += 20 * player.scopeScale;
+			Emitter.setSize(shellSize, shellSize + 2);
+			Emitter.setSpeed(shellSize, shellSize);
+			Emitter.setArea(Room.mid.w, Room.mid.w, Room.mid.h, Room.mid.h);
+			Emitter.emit(1);
+			player.ammo--;
+			const b = createBullet();
+			b.mesh.transform.position.set(Vec3.add(mainCamera.transform.position, Vec3.mul(mainCamera.lookDir, player.bulletOffset)));
+			if (player.ads > 0.5) {
+				// ads recoil
+				mainCamera.transform.rotation.x -= 0.5;
+				mainCamera.transform.rotation.y += Math.cos(shootTime * 0.01) * ((Math.sin(shootTime * 0.023) + 1) * 0.5);
+				b.mesh.transform.position.add(Vec3.random(0.05, 0.05, 0));
+				b.velocity.set(Vec3.mul(mainCamera.lookDir, player.bulletSpeed));
+			}
+			else {
+				// hipfire recoil
+				mainCamera.transform.rotation.x -= 1;
+				b.mesh.transform.position.add(Vec3.random(0.1, 0.2, 0));
+				b.velocity.set(Mat4.multiplyVector(matCameraRot, new Vec3(Math.range(-0.1, 0.1), 0, player.bulletSpeed)));
+			}
+			b.mesh.transform.rotation.set(mainCamera.transform.rotation);
+			bulletTime = Time.time + 42;
+		}
+		else {
+			// auto reload
+			player.runReload();
+		}
+	}
+
+	if (Input.mouseDown(0)) {
+		if (!player.reloading && player.ammo > 0) {
+			player.isShooting = true;
+		}
+		Sound.play('r99');
+	}
+
+	if (Sound.isPlaying('r99')) {
+		if (!player.isShooting || !Input.mouseHold(0) || player.ammo <= 0 || player.reloading) {
+			Sound.stop('r99');
+		}
+	}
+
+	if (Input.keyDown(KeyCode.R)) {
+		player.runReload();
+	}
+
+	if (Input.mouseHold(0)) {
+		shootTime += Time.deltaTime;
+	}
+	else {
+		shootTime = 0;
+	}
 
 	// Debug
 	if (Input.keyDown(KeyCode.O)) showOutline = !showOutline;
@@ -712,7 +924,7 @@ Game.update = () => {
 	totalTris = 0;
 	totalTrisRasterized = 0;
 
-	const matCameraRot = Mat4.multiplyMatrix(Mat4.makeRotationX(mainCamera.transform.rotation.x), Mat4.makeRotationY(mainCamera.transform.rotation.y));
+	matCameraRot = Mat4.multiplyMatrix(Mat4.makeRotationX(mainCamera.transform.rotation.x), Mat4.makeRotationY(mainCamera.transform.rotation.y));
 
 	mainCamera.lookDir = Mat4.multiplyVector(matCameraRot, Vec3.forward);
 	mainCamera.lookDirRight = Mat4.multiplyVector(matCameraRot, Vec3.right);
@@ -723,10 +935,29 @@ Game.update = () => {
 
 	updateInputs();
 
-	matProj = Mat4.makeProjection(Room.h / Room.w, 70);
+	matProj = Mat4.makeProjection(Room.h / Room.w, player.fov);
 
 	trianglesToRaster.length = 0;
 	trianglesToRaster = processMesh(meshTri, matProj, matView);
+
+	const hue = new Vec3(1, 0.5, 0.5);
+	for (var i = bullets.length - 1; i >= 0; --i) {
+		const b = bullets[i];
+		b.alarm += Time.deltaTime;
+		if (b.alarm > 3000) {
+			bullets.splice(i, 1);
+			continue;
+		}
+		b.mesh.transform.position.add(b.velocity);
+		// If inside the default unrotated main cube
+		if (meshTri.contains(b.mesh.transform.position)) {
+			bullets.splice(i, 1);
+			continue;
+		}
+		b.mesh.transform.rotation.x += 1;
+		b.velocity.y -= player.bulletGravity;
+		trianglesToRaster = trianglesToRaster.concat(processMesh(b.mesh, matProj, matView, hue));
+	}
 };
 
 Game.render = () => {
@@ -734,20 +965,139 @@ Game.render = () => {
 };
 
 Game.renderUI = () => {
-	if (GLOBAL.debugMode % 2 !== 0) return;
-	Draw.setFont(Font.m);
-	Draw.setColor(C.white);
-	Draw.setHVAlign(Align.l, Align.t);
-	Draw.text(16, 48, Time.FPS +
-		`\n${mainCamera.transform.position.toString(2)}\n${mainCamera.transform.rotation.toString(2)}` +
-		`\nTotal tris: ${totalTris}\nRasterized tris: ${totalTrisRasterized}` +
-		`\nClick 'Choose File' to load an .obj model.` +
-		'\nPress <W>, <A>, <S>, <D>, <Q>, and <E> to move around.' +
-		'\nPress arrow buttons look around.' +
-		`\nPress <O> to ${showOutline? 'hide' : 'show'} outline.` +
-		`\nPress <M> to ${debugClipping? 'disable' : 'enable'} debug clipping.` +
-		`\nPress <U> to hide this info.` +
-		`\nPress <L> to change resolution (${optResNames[optResIndex]}).`);
+	if (GLOBAL.debugMode % 2 !== 0) {
+		Draw.setFont(Font.m);
+		Draw.setColor(C.white);
+		Draw.setHVAlign(Align.l, Align.b);
+		Draw.text(16, Room.h - 16, `${Time.FPS}\nGround Y: ${groundY.toFixed(2)}` +
+			`\nPlayer Position: ${mainCamera.transform.position.toString(2)}` +
+			`\nPlayer Rotation: ${mainCamera.transform.rotation.toString(2)}` +
+			'\n[Left Click: Shoot]' +
+			'\n[Right Click: Aim down sight]' +
+			'\n[Left Click then Move Mouse: Look around]\n[W: Forward] [A: Left] [S: Backward] [D: Right]\n[Space: Jump] [Q: Lower ground] [E: Higher ground]' +
+			`\nBullet count: ${bullets.length}`);
+	}
+	else {
+
+		// BG
+		const p = new Vector2(Room.w - 415, Room.h - 124);
+		Draw.primitiveBegin();
+		Draw.vertex(p.x + 36, p.y);
+		Draw.vertex(p.x + 355, p.y);
+		Draw.vertex(p.x + 366, p.y + 16);
+		Draw.vertex(p.x + 316, p.y + 102);
+		Draw.vertex(p.x + 24, p.y + 102);
+		Draw.vertex(p.x, p.y + 60);
+		Draw.setAlpha(0.5);
+		Draw.setColor(C.black);
+		Draw.primitiveEnd();
+		Draw.setAlpha(1);
+
+		// Ammo count
+		Draw.setFont(Font.xxl, Font.bold);
+		Draw.setColor(C.white);
+		Draw.setHVAlign(Align.r, Align.b);
+		Draw.text(Room.w - 138, Room.h - 74, player.ammo);
+		Draw.setFont(Font.l);
+		Draw.text(Room.w - 140, Room.h - 55, player.ammoCount);
+	}
+
+	if (player.ads > 0.1) {
+		const img = document.createElement('canvas');
+		img.width = Room.w;
+		img.height = Room.h;
+		Draw.setContext(img.getContext('2d'));
+
+		const c = 25 - 25 * player.scopeScale;
+
+		Draw.setColor(`rgb(${c}, ${c}, ${c})`);
+		Draw.rect(0, 0, Room.w, Room.h);
+
+		const scopeADSScale = 1 - player.ads;
+		const posoffset = Room.mid.h;
+		const scopePos = new Vector2(Room.mid.w, Room.mid.h + (Math.min(1, scopeADSScale * 2)) * posoffset);
+		const r1 = Room.mid.h * (0.7 + 0.5 * player.scopeScale) + Room.mid.h * scopeADSScale;
+		const r2 = Room.mid.w * (0.4 + 1 * player.scopeScale) + Room.mid.h * scopeADSScale;
+
+		Draw.setColor(C.white);
+		Draw.setHVAlign(Align.c, Align.m);
+		Draw.setAlpha(0.2);
+		Draw.CTX.font = `${12 + 48 * player.scopeScale}px ${Draw.fontDefault.join(',')} serif`;
+		// Draw.text(Room.w - (Room.mid.w - Room.mid.h) * 0.5, Room.mid.h, `x${(player.scope * 0.1).toFixed(1)}`);
+		Draw.text(Room.mid.w + r1 + (r2 - r1) * 0.5, Room.mid.h, `x${(player.scope * 0.1).toFixed(1)}`);
+		Draw.setAlpha(1);
+
+		Draw.CTX.globalCompositeOperation = 'destination-out';
+		Draw.circle(scopePos.x, scopePos.y, r1);
+		Draw.CTX.globalCompositeOperation = 'destination-in';
+		Draw.circle(scopePos.x, scopePos.y, r2);
+		Draw.CTX.globalCompositeOperation = 'source-over';
+
+		Draw.resetContext();
+
+		Draw.CTX.drawImage(img, 0, 0);
+
+		Draw.setFont(Font.l);
+		Draw.setHVAlign(Align.c, Align.m);
+		for (let i = 0; i < 2; i++) {
+			Draw.setColor(i > 0? C.lightGray : C.gray);
+			Draw.text(Room.mid.w - i, Room.h - Font.size - i, `x${(player.scope * 0.1).toFixed(1)}`);
+		}
+	}
+
+	// Reload time bar
+	if (player.reloading) {
+		const p = new Vector2(Room.w - 415, Room.h - 124);
+		Draw.CTX.beginPath();
+		const relSound = Sound.get('reload');
+		const t = 0.04 + relSound.currentTime / relSound.duration;
+		const tt = Math.PI * (0.5 - t);
+		Draw.CTX.arc(p.x + 310, p.y + 42, 18, tt, tt + t * 2 * Math.PI);
+		Draw.setColor(makeHueBright({ r: 255, g: 255, b: 255 }, 0.2 + 0.8 * t));
+		Draw.CTX.lineCap = 'round';
+		Draw.CTX.lineWidth = 4;
+		Draw.CTX.stroke();
+		Draw.CTX.lineWidth = 1;
+	}
+
+	// mouse trail
+	const mouseDiff = Vector2.subtract(mousePosition, prevMousePosition);
+	if (Math.abs(mouseDiff.length) < 100) {
+		const p = mousePosition;
+		const len = mouseDiff.length * 0.01;
+		const d = Math.pointdir(mousePosition, prevMousePosition);
+		const p1 = Vector2.add(p, Math.lendir(len, d + 180));
+		const p2 = Vector2.add(p, Math.lendir(len, d + 90));
+		const p3 = Vector2.add(p, Math.lendir(len, d - 90));
+		const p4 = Vector2.subtract(p, mouseDiff);
+		Draw.CTX.beginPath();
+		Draw.CTX.moveTo(p1.x, p1.y);
+		Draw.CTX.quadraticCurveTo(p2.x, p2.y, p4.x, p4.y);
+		Draw.CTX.quadraticCurveTo(p3.x, p3.y, p1.x, p1.y);
+		Draw.CTX.globalAlpha = 0.5;
+		Draw.CTX.fillStyle = C.white;
+		Draw.CTX.fill();
+		Draw.CTX.globalAlpha = 1;
+		if (document.pointerLockElement !== CANVAS) {
+			Draw.plus(p.x, p.y, 8);
+			Draw.circle(p.x, p.y, 3, true);
+		}
+		else {
+			Draw.setColor(C.white);
+			if (player.ads > 0.1) {
+				Draw.CTX.lineWidth = 2;
+				Draw.CTX.lineCap = 'round';
+				Draw.plus(Room.mid.w, Room.mid.h, 16);
+				Draw.circle(Room.mid.w, Room.mid.h, 6, true);
+				Draw.CTX.lineWidth = 1;
+			}
+			else {
+				Draw.setAlpha(0.5);
+				Draw.circle(Room.mid.w, Room.mid.h, 3, true);
+				Draw.setAlpha(1);
+			}
+		}
+	}
 };
 
 Room.add(Game);
@@ -762,7 +1112,23 @@ file.onchange = (e) => {
 	};
 	reader.readAsText(f);
 }
-document.body.appendChild(file);
+// document.body.appendChild(file);
+
+CANVAS.onclick = () => {
+	CANVAS.requestPointerLock();
+};
+
+const lockChangeAlert = () => {
+	if (document.pointerLockElement === CANVAS) {
+		document.addEventListener('mousemove', mouseMoveEvent);
+	}
+	else {
+		document.removeEventListener('mousemove', mouseMoveEvent);
+	}
+};
+
+document.addEventListener('pointerlockchange', lockChangeAlert);
+window.addEventListener('mousewheel', mouseWheelEvent);
 
 BRANTH.start();
 Room.start('Game');

@@ -3,6 +3,16 @@ class Vector2 {
 		this.x = x;
 		this.y = y;
 	}
+	set(v) {
+		if (v instanceof Vector2) {
+			this.x = v.x;
+			this.y = v.y;
+		}
+		else {
+			this.x = v;
+			this.y = v;
+		}
+	}
 	add(v) {
 		if (v instanceof Vector2) {
 			this.x += v.x;
@@ -1828,6 +1838,23 @@ const Emitter = {
 				this.setOutline(false);
 				this.setToView(false);
 				break;
+			case 'shell':
+				this.setSpeed(10, 10);
+				this.setSpeedInc(-1, -1);
+				this.setSize(8, 10);
+				this.setSizeInc(0, 0);
+				this.setDirection(-120, -70);
+				this.setDirectionInc(0, 0);
+				this.setRotation(180, 180);
+				this.setRotationInc(-10, 10);
+				this.setAlpha(1, 1);
+				this.setColor(C.gold);
+				this.setLife(1000, 1000);
+				this.setShape(Shape.rect);
+				this.setGravity(0, 0);
+				this.setOutline(false);
+				this.setToView(false);
+				break;
 			case 'bubble':
 				this.preset('puff');
 				this.setOutline(true);
@@ -2102,6 +2129,7 @@ const BRANTH = {
 				transform: translate(${options.HAlign? '-50%' : '0'}, ${options.VAlign? '-50%' : '0'});
 			}
 			canvas {
+				cursor: none;
 				width: 100%;
 				height: 100%;
 			}
