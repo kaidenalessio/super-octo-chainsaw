@@ -1,5 +1,6 @@
 Sound.add('r99', 'r99.mp3');
 Sound.add('reload', 'reload.mp3');
+Sound.add('ammograb', 'ammograb.mp3');
 
 const makeHueBright = (c, b) => {
 	return `rgb(${c.r * b}, ${c.g * b}, ${c.b * b})`;
@@ -139,6 +140,9 @@ class Vec3 {
 		if (fractionDigits > -1) return `(${this.x.toFixed(fractionDigits)}, ${this.y.toFixed(fractionDigits)}, ${this.z.toFixed(fractionDigits)})`;
 		return `(${this.x}, ${this.y}, ${this.z})`;
 	}
+	static distance(v1, v2) {
+		return Math.sqrt((v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y) + (v2.z-v1.z)*(v2.z-v1.z));
+	}
 	static add(v1, v2) {
 		if (typeof v2 === 'number') return new Vec3(v1.x+v2, v1.y+v2, v1.z+v2);
 		return new Vec3(v1.x+v2.x, v1.y+v2.y, v1.z+v2.z);
@@ -262,6 +266,34 @@ class Triangle {
 
 	get C() {
 		return this.p[2];
+	}
+
+	static drawPath(t) {
+		Draw.CTX.beginPath();
+		Draw.CTX.moveTo(t.p[0].x, t.p[0].y);
+		Draw.CTX.lineTo(t.p[1].x, t.p[1].y);
+		Draw.CTX.lineTo(t.p[2].x, t.p[2].y);
+		Draw.CTX.closePath();
+	}
+
+	static draw(t) {
+		Triangle.drawPath(t);
+		Draw.setColor(t.c);
+		Draw.CTX.fill();
+		Draw.CTX.stroke();
+		if (showOutline) {
+			Draw.CTX.strokeStyle = C.black;
+			Draw.CTX.stroke();
+		}
+	}
+
+	static draw2(t) {
+		Triangle.drawPath(t);
+		Draw.setAlpha(0.5);
+		Draw.setColor(t.c);
+		Draw.CTX.fill();
+		Draw.CTX.stroke();
+		Draw.setAlpha(1);
 	}
 
 	// #### From javid #####
@@ -490,8 +522,12 @@ class Mesh {
 			position: new Vec3(0, 0, 0),
 			rotation: new Vec3(0, 0, 0)
 		};
+		this.name = '';
 		this.assignMeshReference();
+		this.grabbable = false;
 	}
+
+	onGrab() {}
 
 	scale(s) {
 		for (let i = this.tris.length - 1; i >= 0; --i) {
@@ -690,34 +726,56 @@ const processMesh = (mesh, matProj, matView, hue=new Vec3(1, 1, 0.5)) => {
 	return tris;
 };
 
+const Manager = {
+	hoveredTris: [],
+	meshHoveredIDs: []
+};
+
 const rasterizeTriangles = (trianglesToRaster) => {
 	trianglesToRaster.sort((a, b) => a.depth < b.depth? -1 : 1);
 
-	const meshHovered = [];
-	for (let i = 0; i < 2; i++) {
-		for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
-			const triToRaster = trianglesToRaster[i];
-			let hovered = false;
-			if (triToRaster.meshReference instanceof Mesh) {
-				if (meshHovered.indexOf(triToRaster.meshReference.id) === -1) {
-					if (triToRaster.contains(new Vector2(Room.mid.w, Room.mid.h))) {
-						meshHovered.push(triToRaster.meshReference.id);
-						hovered = true;
-					}
-				}
-				else {
-					hovered = true;
-				}
-			}
-			if (hovered) {
-				triToRaster.c = makeHueBright({ r: 1, g: 1, b: 1 }, 155 + triToRaster.dp * 100);
-			}
-		}
-	}
+	Manager.meshHoveredIDs.length = 0;
+	// Uncomment to make hover covers all over mesh
+	// for (let i = 0; i < 2; i++) {
+	// 	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
+	// 		const triToRaster = trianglesToRaster[i];
+	// 		let hovered = false;
+	// 		if (triToRaster.meshReference instanceof Mesh) {
+	// 			if (Manager.meshHoveredIDs.indexOf(triToRaster.meshReference.id) === -1) {
+	// 				if (triToRaster.contains(new Vector2(Room.mid.w, Room.mid.h))) {
+	// 					Manager.meshHoveredIDs.push(triToRaster.meshReference.id);
+	// 					hovered = true;
+	// 				}
+	// 			}
+	// 			else {
+	// 				hovered = true;
+	// 			}
+	// 		}
+	// 		if (hovered) {
+	// 			triToRaster.c = makeHueBright({ r: 1, g: 1, b: 1 }, 155 + triToRaster.dp * 100);
+	// 		}
+	// 	}
+	// }
 
+	Manager.hoveredTris.length = 0;
 	Draw.CTX.lineJoin = LineJoin.round;
 	for (let i = trianglesToRaster.length - 1; i >= 0; --i) {
 		const triToRaster = trianglesToRaster[i];
+		if (triToRaster.contains(new Vector2(Room.mid.w, Room.mid.h))) {
+			if (triToRaster.meshReference.name !== 'Bullet') {
+				Manager.hoveredTris.push(triToRaster);
+			}
+			if (triToRaster.meshReference instanceof Mesh) {
+				if (Manager.meshHoveredIDs.indexOf(triToRaster.meshReference.id) === -1) {
+					if (triToRaster.meshReference.name === 'Monkey Award') {
+						if (Input.mouseHold(0)) {
+							triToRaster.meshReference.transform.rotation.x = 10;
+						}
+					}
+					Manager.meshHoveredIDs.push(triToRaster.meshReference.id);
+				}
+			}
+		}
 		const clipped = [new Triangle(), new Triangle()];
 		const listTriangles = [];
 		listTriangles.push(triToRaster);
@@ -745,21 +803,16 @@ const rasterizeTriangles = (trianglesToRaster) => {
 		}
 		for (const t of listTriangles)
 		{
-			Draw.CTX.beginPath();
-			Draw.CTX.moveTo(t.p[0].x, t.p[0].y);
-			Draw.CTX.lineTo(t.p[1].x, t.p[1].y);
-			Draw.CTX.lineTo(t.p[2].x, t.p[2].y);
-			Draw.CTX.closePath();
-			Draw.setColor(t.c);
-			Draw.CTX.fill();
-			Draw.CTX.stroke();
-			if (showOutline) {
-				Draw.CTX.strokeStyle = C.black;
-				Draw.CTX.stroke();
-			}
+			Triangle.draw(t);
 			totalTrisRasterized++;
 		}
 	}
+
+	// const hoveredTri = Manager.hoveredTris[Manager.hoveredTris.length - 1];
+	// if (hoveredTri) {
+	// 	hoveredTri.c = makeHueBright({ r: 1, g: 1, b: 1 }, 155 + hoveredTri.dp * 100);
+	// 	Triangle.draw2(hoveredTri);
+	// }
 };
 
 let matProj = Mat4.makeProjection();
@@ -784,6 +837,7 @@ class Bullet {
 	constructor() {
 		this.id = 0;
 		this.mesh = Mesh.makeBullet();
+		this.mesh.name = 'Bullet';
 		this.velocity = new Vec3();
 		this.alarm = 0;
 	}
@@ -812,22 +866,66 @@ const destroyBullet = (id) => {
 
 const my3DObjects = [];
 
+const destroyMy3DObject = (instance) => {
+	for (let i = my3DObjects.length - 1; i >= 0; --i) {
+		const b = my3DObjects[i];
+		if (b === instance) {
+			return my3DObjects.splice(i, 1)[0];
+		}
+	}
+	return null;
+};
+
 class My3DObject {
-	constructor(mesh) {
+	constructor(mesh, name='') {
 		this.mesh = mesh;
+		this.mesh.name = name;
 		this.mesh.transform.position.z = 8;
 		this.mesh.transform.position.x = Math.range(-8, 8);
+
+		this.rv = Vec3.random();
+	}
+
+	randomRotate() {
+		this.mesh.transform.rotation.x += this.rv.x;
+		this.mesh.transform.rotation.z += this.rv.z;
+	}
+
+	update() {
+		this.randomRotate();
 	}
 }
 
 (function() {
-	const torus_sm = new My3DObject(Mesh.makeTorusSmall());
-	const torus_md = new My3DObject(Mesh.makeTorusMedium());
-	const torus_lg = new My3DObject(Mesh.makeTorusLarge());
+	const torus_sm = new My3DObject(Mesh.makeTorusSmall(), 'Torus Small');
+	const torus_md = new My3DObject(Mesh.makeTorusMedium(), 'Torus Medium');
+	const torus_lg = new My3DObject(Mesh.makeTorusLarge(), 'Torus Large');
 	torus_sm.mesh.transform.rotation.x = 90;
 	torus_lg.mesh.transform.rotation.x = 90;
 	torus_lg.mesh.transform.rotation.z = 90;
-	my3DObjects.push(torus_sm, torus_md, torus_lg, new My3DObject(Mesh.makeMonkeyAward()));
+	const monkey = new My3DObject(Mesh.makeMonkeyAward(), 'Monkey Award');
+	let vRot = monkey.mesh.transform.rotation;
+	monkey.update = () => {
+		if (Math.abs(vRot.x) > 0) {
+			vRot.x -= Math.sign(vRot.x) * Math.min(Math.abs(vRot.x), 1);
+		}
+	};
+	for (let i = 0; i < 10; i++) {
+		const ammoStack = new My3DObject(Mesh.makeCube(), 'Ammo Stack');
+		ammoStack.mesh.transform.position.z = 3;
+		ammoStack.mesh.transform.position.y = -0.5;
+		ammoStack.mesh.transform.position.x = -5 + i;
+		ammoStack.mesh.scale(0.2);
+		ammoStack.update = () => {};
+		ammoStack.mesh.grabbable = true;
+		ammoStack.mesh.onGrab = () => {
+			player.ammoCount += 20;
+			Sound.play('ammograb');
+			destroyMy3DObject(ammoStack);
+		};
+		my3DObjects.push(ammoStack);
+	}
+	my3DObjects.push(torus_sm, torus_md, torus_lg, monkey);
 }());
 
 const meshTri = Mesh.makeCube();
@@ -876,7 +974,7 @@ const player = {
 	bulletGravity: 0.001,
 	ammo: 32,
 	ammoCap: 32,
-	ammoCount: 360,
+	ammoCount: 180,
 	reloading: false,
 	reloadTime: 1384,
 	runReload() {
@@ -1073,6 +1171,7 @@ Game.update = () => {
 	trianglesToRaster = processMesh(meshTri, matProj, matView);
 
 	for (let i = my3DObjects.length - 1; i >= 0; --i) {
+		my3DObjects[i].update();
 		trianglesToRaster = trianglesToRaster.concat(processMesh(my3DObjects[i].mesh, matProj, matView));
 	}
 
@@ -1098,6 +1197,29 @@ Game.update = () => {
 
 Game.render = () => {
 	rasterizeTriangles(trianglesToRaster);
+};
+
+const Inventory = {
+	list: {},
+	grabKey: KeyCode.F,
+	grabKeyName: 'F',
+	grabDistance: 2,
+	add(key, amount) {
+		if (!this.list[key]) {
+			this.list[key] = 0;
+		}
+		return ++this.list[key];
+	},
+	draw() {
+		// Draw.setFont(Font.m);
+		// Draw.setColor(C.white);
+		// Draw.setHVAlign(Align.l, Align.t);
+		// const keys = Object.keys(this.list);
+		// for (let i = keys.length - 1; i >= 0; --i) {
+		// 	const j = this.list[keys[i]];
+		// 	Draw.text(12, 12+Font.size*i, `${keys[i]}: ${j}`);
+		// }
+	}
 };
 
 Game.renderUI = () => {
@@ -1195,6 +1317,76 @@ Game.renderUI = () => {
 		Draw.CTX.stroke();
 		Draw.CTX.lineWidth = 1;
 	}
+
+	// Hover info
+	if (Manager.hoveredTris.length > 0) {
+		const hoveredTri = Manager.hoveredTris[Manager.hoveredTris.length - 1];
+		const p = new Vector2(Room.mid.w, Room.mid.h);
+		let name = '';
+		let text = '';
+		let distance = -1;
+		let grabbable = false;
+		if (hoveredTri.meshReference instanceof Mesh) {
+			name = hoveredTri.meshReference.name;
+			distance = Vec3.distance(hoveredTri.meshReference.transform.position, mainCamera.transform.position);
+			grabbable = hoveredTri.meshReference.grabbable;
+		}
+
+		Draw.setFont(Font.m);
+		Draw.setHVAlign(Align.l, Align.b);
+		if (name === '') {
+			name = 'Unknown';
+			Draw.setFont(Font.m, Font.italic);
+		}
+
+		if (distance > 0) {
+			text = `${name} (${~~distance}m)`;
+		}
+		else {
+			text = name;
+		}
+
+		const t = Vector2.add(p, new Vector2(10, -10));
+		t.w = Draw.textWidth(text);
+		t.h = Font.size;
+
+		Draw.primitiveBegin();
+		Draw.vertex(p.x, p.y);
+		Draw.vertex(t.x, t.y + 2);
+		Draw.vertex(t.x - 2 + t.w + 10, t.y + 2);
+		Draw.setColor(C.black);
+		Draw.primitiveEnd(Primitive.line);
+		Draw.circle(p.x, p.y, 2);
+		Draw.setAlpha(0.5);
+		Draw.rect(t.x, t.y - t.h - 2, t.w + 8, t.h + 4);
+		Draw.setAlpha(1);
+
+		Draw.setColor(C.white);
+		Draw.text(t.x + 2, t.y, text);
+
+		// grab stuff
+		const executeOnGrab = () => {
+			if (hoveredTri.meshReference instanceof Mesh) {
+				if (hoveredTri.meshReference.onGrab) hoveredTri.meshReference.onGrab();
+			}
+			Inventory.add(name, 1);
+		};
+		if (grabbable) {
+			if (distance < Inventory.grabDistance) {
+				if (Input.keyDown(Inventory.grabKey)) {
+					executeOnGrab();
+				}
+				Draw.setFont(Font.l);
+				Draw.setColor(C.white);
+				Draw.setShadow(0, 0, 10);
+				Draw.text(t.x, p.y + t.h + 2, `[${Inventory.grabKeyName}]`);
+				Draw.resetShadow();
+			}
+		}
+	}
+
+	// Inventory
+	Inventory.draw();
 
 	// mouse trail
 	const mouseDiff = Vector2.subtract(mousePosition, prevMousePosition);
