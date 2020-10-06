@@ -1839,19 +1839,19 @@ const Emitter = {
 				this.setToView(false);
 				break;
 			case 'shell':
-				this.setSpeed(10, 10);
-				this.setSpeedInc(-1, -1);
+				this.setSpeed(40, 60);
+				this.setSpeedInc(0, 0);
 				this.setSize(8, 10);
 				this.setSizeInc(0, 0);
-				this.setDirection(-120, -70);
+				this.setDirection(-60, -50);
 				this.setDirectionInc(0, 0);
-				this.setRotation(180, 180);
-				this.setRotationInc(-10, 10);
+				this.setRotation(170, 190);
+				this.setRotationInc(-20, 20);
 				this.setAlpha(1, 1);
 				this.setColor(C.gold);
 				this.setLife(1000, 1000);
 				this.setShape(Shape.rect);
-				this.setGravity(0, 0);
+				this.setGravity(5, 5);
 				this.setOutline(false);
 				this.setToView(false);
 				break;
@@ -1910,6 +1910,44 @@ const Emitter = {
 				this.setOutline(false);
 				this.setToView(false);
 				break;
+		}
+	},
+	emitCustom(options) {
+		options.x		= options.x			|| {};
+		options.y		= options.y			|| {};
+		options.spd		= options.spd		|| {};
+		options.spdinc	= options.spdinc	|| {};
+		options.size	= options.size		|| {};
+		options.sizeinc	= options.sizeinc	|| {};
+		options.d		= options.d			|| {};
+		options.dinc	= options.dinc		|| {};
+		options.r		= options.r			|| {};
+		options.rinc	= options.rinc		|| {};
+		options.a		= options.a			|| {};
+		options.life	= options.life		|| {};
+		options.grav	= options.grav		|| {};
+		for (let i = 0; i < options.n; i++) {
+			const n = new BranthParticle(
+				Math.range(options.x.min || this.x.min, options.x.max || this.x.max),
+				Math.range(options.y.min || this.y.min, options.y.max || this.y.max),
+				Math.range(options.spd.min || this.spd.min, options.spd.max || this.spd.max),
+				Math.range(options.spdinc.min || this.spdinc.min, options.spdinc.max || this.spdinc.max),
+				Math.range(options.size.min || this.size.min, options.size.max || this.size.max),
+				Math.range(options.sizeinc.min || this.sizeinc.min, options.sizeinc.max || this.sizeinc.max),
+				Math.range(options.d.min || this.d.min, options.d.max || this.d.max),
+				Math.range(options.dinc.min || this.dinc.min, options.dinc.max || this.dinc.max),
+				Math.range(options.r.min || this.r.min, options.r.max || this.r.max),
+				Math.range(options.rinc.min || this.rinc.min, options.rinc.max || this.rinc.max),
+				Math.range(options.a.min || this.a.min, options.a.max || this.a.max),
+				options.c || this.c,
+				Math.range(options.life.min || this.life.min, options.life.max || this.life.max),
+				options.shape || this.shape,
+				Math.range(options.grav.min || this.grav.min, options.grav.max || this.grav.max),
+				options.outline || this.outline,
+				options.toView || this.toView
+			);
+			n.depth = options.depth || this.depth;
+			OBJ.push(BranthParticle, n);
 		}
 	},
 	emit(n) {
