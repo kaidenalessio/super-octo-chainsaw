@@ -2,8 +2,8 @@ Sound.add('r99', 'r99.mp3');
 Sound.add('reload', 'reload.mp3');
 Sound.add('ammograb', 'ammograb.mp3');
 
-const makeHueBright = (c, b) => {
-	return `rgb(${c.r * b}, ${c.g * b}, ${c.b * b})`;
+const makeRGBLum = (rgb, lum) => {
+	return `rgb(${rgb.r * lum}, ${rgb.g * lum}, ${rgb.b * lum})`;
 };
 
 class Vec3 {
@@ -628,6 +628,20 @@ class Mesh {
 		return m;
 	}
 
+	/**
+	 * Returns a floor mesh with given size `x` by `x`.
+	 * @param {number} [x=1] The floor size.
+	 */
+
+	static makeFloor(x=1) {
+		const xx = x * 0.5;
+		const m = new Mesh([
+			new Triangle([new Vec3(-xx, 0, -xx), new Vec3(-xx, 0, xx), new Vec3(xx, 0, xx)]),
+			new Triangle([new Vec3(-xx, 0, -xx), new Vec3(xx, 0, xx), new Vec3(xx, 0, -xx)])
+		]);
+		return m;
+	}
+
 	static makeTorusLarge() {
 		return Mesh.LoadFromFile(`# Blender v2.90.1 OBJ File: '' # www.blender.org o Cube v 2.560000 0.000000 0.000000 v 2.500000 -0.103923 0.000000 v 2.380000 -0.103923 0.000000 v 2.320000 -0.000000 0.000000 v 2.380000 0.103923 0.000000 v 2.500000 0.103923 0.000000 v 2.217025 0.000000 1.280000 v 2.165063 -0.103923 1.250000 v 2.061140 -0.103923 1.190000 v 2.009179 -0.000000 1.160000 v 2.061140 0.103923 1.190000 v 2.165063 0.103923 1.250000 v 1.280000 0.000000 2.217025 v 1.250000 -0.103923 2.165064 v 1.190000 -0.103923 2.061141 v 1.160000 -0.000000 2.009179 v 1.190000 0.103923 2.061141 v 1.250000 0.103923 2.165064 v 0.000000 0.000000 2.560000 v 0.000000 -0.103923 2.500000 v 0.000000 -0.103923 2.380000 v 0.000000 -0.000000 2.320000 v 0.000000 0.103923 2.380000 v 0.000000 0.103923 2.500000 v -1.280000 0.000000 2.217025 v -1.250000 -0.103923 2.165064 v -1.190000 -0.103923 2.061141 v -1.160000 -0.000000 2.009179 v -1.190000 0.103923 2.061141 v -1.250000 0.103923 2.165064 v -2.217025 0.000000 1.280001 v -2.165063 -0.103923 1.250001 v -2.061140 -0.103923 1.190001 v -2.009179 -0.000000 1.160001 v -2.061140 0.103923 1.190001 v -2.165063 0.103923 1.250001 v -2.560000 0.000000 0.000000 v -2.500000 -0.103923 0.000000 v -2.380000 -0.103923 0.000000 v -2.320000 -0.000000 0.000000 v -2.380000 0.103923 0.000000 v -2.500000 0.103923 0.000000 v -2.217025 0.000000 -1.279999 v -2.165064 -0.103923 -1.250000 v -2.061141 -0.103923 -1.190000 v -2.009179 -0.000000 -1.160000 v -2.061141 0.103923 -1.190000 v -2.165064 0.103923 -1.250000 v -1.280000 0.000000 -2.217025 v -1.250000 -0.103923 -2.165064 v -1.190000 -0.103923 -2.061141 v -1.160000 -0.000000 -2.009179 v -1.190000 0.103923 -2.061141 v -1.250000 0.103923 -2.165064 v 0.000000 0.000000 -2.560000 v 0.000000 -0.103923 -2.500000 v 0.000000 -0.103923 -2.380000 v 0.000000 -0.000000 -2.320000 v 0.000000 0.103923 -2.380000 v 0.000000 0.103923 -2.500000 v 1.280000 0.000000 -2.217025 v 1.250000 -0.103923 -2.165064 v 1.190000 -0.103923 -2.061141 v 1.160000 -0.000000 -2.009179 v 1.190000 0.103923 -2.061141 v 1.250000 0.103923 -2.165064 v 2.217025 0.000000 -1.280000 v 2.165063 -0.103923 -1.250000 v 2.061140 -0.103923 -1.190000 v 2.009179 -0.000000 -1.160000 v 2.061140 0.103923 -1.190000 v 2.165063 0.103923 -1.250000 s off f 1 8 2 f 2 9 3 f 3 10 4 f 10 5 4 f 5 12 6 f 12 1 6 f 13 8 7 f 8 15 9 f 9 16 10 f 16 11 10 f 11 18 12 f 12 13 7 f 19 14 13 f 14 21 15 f 21 16 15 f 22 17 16 f 17 24 18 f 24 13 18 f 25 20 19 f 26 21 20 f 27 22 21 f 28 23 22 f 29 24 23 f 30 19 24 f 31 26 25 f 26 33 27 f 27 34 28 f 34 29 28 f 29 36 30 f 30 31 25 f 37 32 31 f 38 33 32 f 39 34 33 f 40 35 34 f 41 36 35 f 42 31 36 f 43 38 37 f 44 39 38 f 45 40 39 f 46 41 40 f 47 42 41 f 48 37 42 f 49 44 43 f 50 45 44 f 51 46 45 f 46 53 47 f 53 48 47 f 48 49 43 f 55 50 49 f 50 57 51 f 57 52 51 f 52 59 53 f 59 54 53 f 54 55 49 f 61 56 55 f 62 57 56 f 57 64 58 f 64 59 58 f 65 60 59 f 66 55 60 f 67 62 61 f 62 69 63 f 69 64 63 f 64 71 65 f 71 66 65 f 66 67 61 f 1 68 67 f 2 69 68 f 3 70 69 f 4 71 70 f 5 72 71 f 6 67 72 f 1 7 8 f 2 8 9 f 3 9 10 f 10 11 5 f 5 11 12 f 12 7 1 f 13 14 8 f 8 14 15 f 9 15 16 f 16 17 11 f 11 17 18 f 12 18 13 f 19 20 14 f 14 20 21 f 21 22 16 f 22 23 17 f 17 23 24 f 24 19 13 f 25 26 20 f 26 27 21 f 27 28 22 f 28 29 23 f 29 30 24 f 30 25 19 f 31 32 26 f 26 32 33 f 27 33 34 f 34 35 29 f 29 35 36 f 30 36 31 f 37 38 32 f 38 39 33 f 39 40 34 f 40 41 35 f 41 42 36 f 42 37 31 f 43 44 38 f 44 45 39 f 45 46 40 f 46 47 41 f 47 48 42 f 48 43 37 f 49 50 44 f 50 51 45 f 51 52 46 f 46 52 53 f 53 54 48 f 48 54 49 f 55 56 50 f 50 56 57 f 57 58 52 f 52 58 59 f 59 60 54 f 54 60 55 f 61 62 56 f 62 63 57 f 57 63 64 f 64 65 59 f 65 66 60 f 66 61 55 f 67 68 62 f 62 68 69 f 69 70 64 f 64 70 71 f 71 72 66 f 66 72 67 f 1 2 68 f 2 3 69 f 3 4 70 f 4 5 71 f 5 6 72 f 6 1 67`);
 	}
@@ -667,7 +681,7 @@ class Mesh {
 	}
 }
 
-const processMesh = (mesh, matProj, matView, hue=new Vec3(1, 1, 0.5)) => {
+const processMesh = (mesh, matProj, matView, rgbVec=new Vec3(1, 1, 0.5)) => {
 	const tris = [];
 	const matWorld = Mat4.makeWorld(mesh.transform);
 	for (let i = mesh.tris.length - 1; i >= 0; --i) {
@@ -692,13 +706,14 @@ const processMesh = (mesh, matProj, matView, hue=new Vec3(1, 1, 0.5)) => {
 		const lightDirection = new Vec3(0, 0, -1); lightDirection.normalize();
 		tri.dp = Vec3.dot(normal, lightDirection);
 		const c = 50 + tri.dp * 205;
-		tri.c = makeHueBright(hue.toRGB(), c);
+		tri.c = makeRGBLum(rgbVec.toRGB(), c);
 
 		// Convert world -> view space
 		tri.p[0] = Mat4.multiplyVector(matView, tri.p[0]);
 		tri.p[1] = Mat4.multiplyVector(matView, tri.p[1]);
 		tri.p[2] = Mat4.multiplyVector(matView, tri.p[2]);
 
+		// Clipping
 		let clippedCount = 0;
 		const clipped = [new Triangle(), new Triangle()];
 		clippedCount = Triangle.clipAgainstPlane(new Vec3(0, 0, 0.1), Vec3.forward, tri, clipped);
@@ -752,7 +767,7 @@ const rasterizeTriangles = (trianglesToRaster) => {
 	// 			}
 	// 		}
 	// 		if (hovered) {
-	// 			triToRaster.c = makeHueBright({ r: 1, g: 1, b: 1 }, 155 + triToRaster.dp * 100);
+	// 			triToRaster.c = makeRGBLum({ r: 1, g: 1, b: 1 }, 155 + triToRaster.dp * 100);
 	// 		}
 	// 	}
 	// }
@@ -776,6 +791,8 @@ const rasterizeTriangles = (trianglesToRaster) => {
 				}
 			}
 		}
+
+		// Clipping
 		const clipped = [new Triangle(), new Triangle()];
 		const listTriangles = [];
 		listTriangles.push(triToRaster);
@@ -810,7 +827,7 @@ const rasterizeTriangles = (trianglesToRaster) => {
 
 	// const hoveredTri = Manager.hoveredTris[Manager.hoveredTris.length - 1];
 	// if (hoveredTri) {
-	// 	hoveredTri.c = makeHueBright({ r: 1, g: 1, b: 1 }, 155 + hoveredTri.dp * 100);
+	// 	hoveredTri.c = makeRGBLum({ r: 1, g: 1, b: 1 }, 155 + hoveredTri.dp * 100);
 	// 	Triangle.draw2(hoveredTri);
 	// }
 };
@@ -877,12 +894,12 @@ const destroyMy3DObject = (instance) => {
 };
 
 class My3DObject {
-	constructor(mesh, name='') {
+	constructor(mesh, name='', rgbVec=new Vec3(1, 1, 0.5)) {
 		this.mesh = mesh;
 		this.mesh.name = name;
 		this.mesh.transform.position.z = 8;
 		this.mesh.transform.position.x = Math.range(-8, 8);
-
+		this.rgbVec = rgbVec;
 		this.rv = Vec3.random();
 	}
 
@@ -897,12 +914,20 @@ class My3DObject {
 }
 
 (function() {
+
+	// const floor = new My3DObject(Mesh.makeFloor(200), 'Ground');
+	// floor.mesh.transform.position.reset();
+	// floor.update = () => {
+	// 	floor.mesh.transform.position.y = -1;
+	// };
+
 	const torus_sm = new My3DObject(Mesh.makeTorusSmall(), 'Torus Small');
 	const torus_md = new My3DObject(Mesh.makeTorusMedium(), 'Torus Medium');
 	const torus_lg = new My3DObject(Mesh.makeTorusLarge(), 'Torus Large');
 	torus_sm.mesh.transform.rotation.x = 90;
 	torus_lg.mesh.transform.rotation.x = 90;
 	torus_lg.mesh.transform.rotation.z = 90;
+
 	const monkey = new My3DObject(Mesh.makeMonkeyAward(), 'Monkey Award');
 	let vRot = monkey.mesh.transform.rotation;
 	monkey.update = () => {
@@ -910,8 +935,12 @@ class My3DObject {
 			vRot.x -= Math.sign(vRot.x) * Math.min(Math.abs(vRot.x), 1);
 		}
 	};
+
+	my3DObjects.push(torus_sm, torus_md, torus_lg, monkey);
+
 	for (let i = 0; i < 10; i++) {
-		const ammoStack = new My3DObject(Mesh.makeCube(), 'Ammo Stack');
+		const ammoStack = new My3DObject(Mesh.makeCube(), 'Ammo Stack', new Vec3(0.92, 0.24, 0.26));
+		ammoStack.mesh.transform.rotation.y = Math.range(-90, 90);
 		ammoStack.mesh.transform.position.z = 3;
 		ammoStack.mesh.transform.position.y = -0.5;
 		ammoStack.mesh.transform.position.x = -5 + i;
@@ -925,7 +954,6 @@ class My3DObject {
 		};
 		my3DObjects.push(ammoStack);
 	}
-	my3DObjects.push(torus_sm, torus_md, torus_lg, monkey);
 }());
 
 const meshTri = Mesh.makeCube();
@@ -1153,6 +1181,9 @@ Game.update = () => {
 	totalTris = 0;
 	totalTrisRasterized = 0;
 
+	mainCamera.transform.rotation.x = Math.clamp(mainCamera.transform.rotation.x, -85, 85);
+	mainCamera.transform._rotation.x = Math.clamp(mainCamera.transform._rotation.x, -85, 85);
+
 	matCameraRot = Mat4.multiplyMatrix(Mat4.makeRotationX(mainCamera.transform._rotation.x), Mat4.makeRotationY(mainCamera.transform._rotation.y));
 
 	mainCamera.lookDir = Mat4.multiplyVector(matCameraRot, Vec3.forward);
@@ -1172,10 +1203,10 @@ Game.update = () => {
 
 	for (let i = my3DObjects.length - 1; i >= 0; --i) {
 		my3DObjects[i].update();
-		trianglesToRaster = trianglesToRaster.concat(processMesh(my3DObjects[i].mesh, matProj, matView));
+		trianglesToRaster = trianglesToRaster.concat(processMesh(my3DObjects[i].mesh, matProj, matView, my3DObjects[i].rgbVec));
 	}
 
-	const hue = new Vec3(1, 0.5, 0.5);
+	const rgbVec = new Vec3(1, 0.5, 0.5);
 	for (let i = bullets.length - 1; i >= 0; --i) {
 		const b = bullets[i];
 		b.alarm += Time.deltaTime;
@@ -1191,11 +1222,19 @@ Game.update = () => {
 		}
 		b.mesh.transform.rotation.x += 1;
 		b.velocity.y -= player.bulletGravity;
-		trianglesToRaster = trianglesToRaster.concat(processMesh(b.mesh, matProj, matView, hue));
+		trianglesToRaster = trianglesToRaster.concat(processMesh(b.mesh, matProj, matView, rgbVec));
 	}
 };
 
+const DrawBackground = () => {
+	Draw.setColor(C.skyBlue);
+	Draw.rect(0, 0, Room.w, Room.mid.h);
+	Draw.setColor(C.green);
+	Draw.rect(0, Room.mid.h, Room.w, Room.mid.h);
+};
+
 Game.render = () => {
+	DrawBackground();
 	rasterizeTriangles(trianglesToRaster);
 };
 
@@ -1311,7 +1350,7 @@ Game.renderUI = () => {
 		const t = 0.04 + relSound.currentTime / relSound.duration;
 		const tt = Math.PI * (0.5 - t);
 		Draw.CTX.arc(p.x + 310, p.y + 42, 18, tt, tt + t * 2 * Math.PI);
-		Draw.setColor(makeHueBright({ r: 255, g: 255, b: 255 }, 0.2 + 0.8 * t));
+		Draw.setColor(makeRGBLum({ r: 255, g: 255, b: 255 }, 0.2 + 0.8 * t));
 		Draw.CTX.lineCap = 'round';
 		Draw.CTX.lineWidth = 4;
 		Draw.CTX.stroke();
