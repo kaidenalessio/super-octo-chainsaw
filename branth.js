@@ -177,6 +177,7 @@ const Time = {
 	deltaTime: 0,
 	fixedDeltaTime: 1000 / 60,
 	_fpsCount: 0,
+	frameCount: 0,
 	get frameRate() {
 		return this.fixedDeltaTime / this.deltaTime;
 	},
@@ -192,6 +193,7 @@ const Time = {
 			this._fpsCount -= 6;
 		}
 		else this._fpsCount++;
+		this.frameCount++;
 	},
 	toSeconds(t) {
 		return Math.ceil(t / 1000);

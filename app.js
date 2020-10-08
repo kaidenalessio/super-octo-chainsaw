@@ -1,3 +1,80 @@
+let firebaseInitialized = false;
+
+const firebaseConfig = {
+	apiKey: "*",
+	authDomain: "*",
+	databaseURL: "*",
+	projectId: "*",
+	storageBucket: "*",
+	messagingSenderId: "*",
+	appId: "*"
+};
+
+if (firebase) {
+	firebase.initializeApp(firebaseConfig);
+	try {
+		firebase.database();
+		firebaseInitialized = true;
+	}
+	catch {
+		firebaseInitialized = false;
+	}
+}
+
+let database;
+if (firebaseInitialized) {
+	database = firebase.database();
+}
+
+const writeUserData = (id, x, y, z) => {
+	database.ref(`users/${id}`).set({ x, y, z });
+};
+
+const otherPlayersId = [];
+
+const updateOtherPlayers = (id, pos) => {
+	if (otherPlayersId.indexOf(id) < 0) {
+		const rgbVec = new Vec3(Math.range(0.5, 1), Math.range(0.5, 1), Math.range(0.5, 1));
+		const n = new My3DObject(Mesh.makeCube(), id, rgbVec);
+		otherPlayersId.push(id);
+		my3DObjects.push(n);
+	}
+
+	for (let i = my3DObjects.length - 1; i >= 0; --i) {
+		const m = my3DObjects[i].mesh;
+		if (m.name === id) {
+			m.transform.position.set(new Vec3(pos.x, pos.y, pos.z));
+		}
+	}
+};
+
+const updateUsersData = (data) => {
+	const keys = Object.keys(data);
+	const values = Object.values(data);
+	for (let i = keys.length - 1; i >= 0; --i) {
+		if (keys[i] !== GLOBAL.key) {
+			updateOtherPlayers(keys[i], values[i]);
+		}
+	}
+};
+
+if (firebaseInitialized) {
+	database.ref('users').on('value', (snapshot) => {
+		updateUsersData(snapshot.val());
+	});
+}
+
+const updateNetwork = () => {
+	if (firebaseInitialized) {
+		if (player.isMoving) {
+			if (Time.frameCount % 10 === 0) {
+				const p = mainCamera.transform.position;
+				writeUserData(GLOBAL.key, p.x, p.y, p.z);
+			}
+		}
+	}
+};
+
 Sound.add('r99', 'r99.mp3');
 Sound.add('reload', 'reload.mp3');
 Sound.add('ammograb', 'ammograb.mp3');
@@ -139,6 +216,11 @@ class Vec3 {
 	toString(fractionDigits=-1) {
 		if (fractionDigits > -1) return `(${this.x.toFixed(fractionDigits)}, ${this.y.toFixed(fractionDigits)}, ${this.z.toFixed(fractionDigits)})`;
 		return `(${this.x}, ${this.y}, ${this.z})`;
+	}
+	equal(v) {
+		return (this.x === v.x &&
+				this.y === v.y &&
+				this.z === v.z);
 	}
 	static distance(v1, v2) {
 		return Math.sqrt((v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y) + (v2.z-v1.z)*(v2.z-v1.z));
@@ -942,7 +1024,7 @@ class My3DObject {
 		const ammoStack = new My3DObject(Mesh.makeCube(), 'Ammo Stack', new Vec3(0.92, 0.24, 0.26));
 		ammoStack.mesh.transform.rotation.y = Math.range(-90, 90);
 		ammoStack.mesh.transform.position.z = 3;
-		ammoStack.mesh.transform.position.y = -0.5;
+		ammoStack.mesh.transform.position.y = 0.1;
 		ammoStack.mesh.transform.position.x = -5 + i;
 		ammoStack.mesh.scale(0.2);
 		ammoStack.update = () => {};
@@ -957,6 +1039,22 @@ class My3DObject {
 }());
 
 const meshTri = Mesh.makeCube();
+meshTri.vsp = 0;
+meshTri.jumpTime = 0;
+meshTri.update = () => {
+	if (Time.time > meshTri.jumpTime) {
+		meshTri.vsp = Math.range(0.1, 0.2);
+		meshTri.jumpTime = Time.time + Math.range(1000, 1200);
+	}
+
+	meshTri.transform.position.y += meshTri.vsp;
+	meshTri.vsp -= 0.01;
+
+	if (meshTri.transform.position.y < 0.5) {
+		meshTri.transform.position.y = 0.5;
+	}
+};
+meshTri.transform.position.y = 0.5;
 meshTri.transform.position.z = 5;
 
 let showOutline = false;
@@ -979,7 +1077,7 @@ let mouseSensitivity = 0.2;
 
 let matCameraRot = Vec3.forward;
 
-let groundY = 0;
+let groundY = 0.5;
 
 const Game = new BranthRoom('Game');
 
@@ -987,6 +1085,8 @@ const player = {
 	vsp: 0,
 	ads: 0,
 	fov: 90,
+	prevPosition: new Vec3(0, 0, 0),
+	isMoving: false,
 	scope: 20,
 	scopeRange: {
 		min: 20,
@@ -1037,6 +1137,8 @@ const mouseWheelEvent = (e) => {
 let shootTime = 0;
 
 const updateInputs = () => {
+	player.prevPosition.set(mainCamera.transform.position);
+
 	prevMousePosition.set(mousePosition);
 	mousePosition.set(Input.mousePosition);
 
@@ -1178,6 +1280,8 @@ const updateInputs = () => {
 };
 
 Game.update = () => {
+	updateNetwork();
+
 	totalTris = 0;
 	totalTrisRasterized = 0;
 
@@ -1198,7 +1302,11 @@ Game.update = () => {
 
 	matProj = Mat4.makeProjection(Room.h / Room.w, player.fov);
 
+	player.isMoving = !player.prevPosition.equal(mainCamera.transform.position);
+
 	trianglesToRaster.length = 0;
+
+	meshTri.update();
 	trianglesToRaster = processMesh(meshTri, matProj, matView);
 
 	for (let i = my3DObjects.length - 1; i >= 0; --i) {
